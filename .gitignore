@@ -1,0 +1,19 @@
+# Byte-code
+__pycache__/
+*.pyc
+
+# IDE / Editor specific
+.idea/
+*.vscode/
+
+# Environment variables - VERY IMPORTANT
+.env
+
+# Database files - Do not commit data
+*.db
+*.sqlite3
+
+# Virtual environment
+venv/
+.venv/
+env/
