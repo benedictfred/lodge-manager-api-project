@@ -5,14 +5,12 @@ from app.schemas import user as schema_user
 from app.crud import user as crud_user
 from app.core.security import verify_password_hash, create_access_token
 from fastapi.security import OAuth2PasswordRequestForm
-
+from app.core.enums import UserRole
 router = APIRouter()
-
-
-@router.post('/register', response_model=schema_user.UserResponse)
 def sign_up_user(
         user_data: schema_user.UserCreate,
-        db: Session = Depends(get_db)
+        db: Session,
+        role: UserRole = UserRole.LANDLORD
 ):
     user_exist = crud_user.get_user_by_email(db=db, email=user_data.email.lower())
 
@@ -22,8 +20,25 @@ def sign_up_user(
             detail=f'User with email: {user_data.email} already exists'
         )
 
-    return crud_user.create_user(db=db, user_data=user_data)
+    return crud_user.create_user(db=db, user_data=user_data, role=role)
 
+
+
+
+@router.post('/register/landord', response_model=schema_user.UserResponse)
+def register_landlord(
+        user_data: schema_user.UserCreate,
+        db: Session = Depends(get_db)
+):
+    return sign_up_user(user_data=user_data, db=db)
+
+
+@router.post('/register/tenant', response_model=schema_user.UserResponse)
+def register_tenant(
+        user_data: schema_user.UserCreate,
+        db: Session = Depends(get_db)
+):
+    return sign_up_user(user_data=user_data, db=db, role =UserRole.TENANT)
 
 @router.post('/login')
 def login_user(

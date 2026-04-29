@@ -13,4 +13,4 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.LANDLORD, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    lodges = relationship('Lodge', back_populates='owner')
+    # lodges = relationship('Lodge', back_populates='owner')
