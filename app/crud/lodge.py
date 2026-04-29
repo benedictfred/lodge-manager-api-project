@@ -20,8 +20,8 @@ def get_lodge_by_name_and_landlord(db: Session, landlord_id: int, lodge_name: st
 
 
 
-def get_lodges(db: Session, landlord_id: int):
-    return db.query(Lodge).filter(Lodge.landlord_id == landlord_id).all()
+def get_lodges(db: Session, landlord_id: int, skip: int= 0, limit: int =50):
+    return db.query(Lodge).filter(Lodge.landlord_id == landlord_id).offset(skip).limit(limit).all()
 
 
 def get_lodge(db:Session, landlord_id: int , lodge_id):

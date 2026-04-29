@@ -11,7 +11,7 @@ from app.services.exceptions import UserAlreadyExistError
 router = APIRouter()
 
 
-@router.post('/register/landord', response_model=schema_user.UserResponse, status_code=201)
+@router.post('/register/landlord', response_model=schema_user.UserResponse, status_code=201)
 def register_landlord(
         user_data: schema_user.UserCreate,
         db: Session = Depends(get_db)
