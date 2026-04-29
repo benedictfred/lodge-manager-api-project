@@ -2,16 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.schemas import user as schema_user
-from app.crud import user as crud_user
-from app.core.security import verify_password_hash, create_access_token
+from app.core.security import  create_access_token
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.enums import UserRole
-from app.services.user_service import _sign_up_user, authenticate_user
+from app.services.user_service import sign_up_user, authenticate_user
 from app.services.exceptions import UserAlreadyExistError
 
 router = APIRouter()
-
-
 
 
 @router.post('/register/landord', response_model=schema_user.UserResponse, status_code=201)
@@ -20,7 +17,7 @@ def register_landlord(
         db: Session = Depends(get_db)
 ):
     try:
-        return  _sign_up_user(user_data=user_data, db=db)
+        return  sign_up_user(user_data=user_data, db=db)
     except UserAlreadyExistError as error:
         raise HTTPException(
             status_code=400,
@@ -34,7 +31,7 @@ def register_tenant(
         db: Session = Depends(get_db)
 ):
     try:
-        return _sign_up_user(user_data=user_data, db=db, role=UserRole.TENANT)
+        return sign_up_user(user_data=user_data, db=db, role=UserRole.TENANT)
 
     except UserAlreadyExistError as error:
         raise HTTPException(

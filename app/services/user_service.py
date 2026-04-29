@@ -6,7 +6,7 @@ from app.core.enums import UserRole
 from .exceptions import UserAlreadyExistError
 from app.core.security import verify_password_hash
 
-def _sign_up_user(
+def sign_up_user(
         user_data: schema_user.UserCreate,
         db: Session,
         role: UserRole = UserRole.LANDLORD
