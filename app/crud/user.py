@@ -5,7 +5,7 @@ from app.core.security import get_password_hash, verify_password_hash
 
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+    return db.query(User).filter(User.email == email.lower()).first()
 
 
 def create_user(db: Session, user_data: UserCreate) -> User:
