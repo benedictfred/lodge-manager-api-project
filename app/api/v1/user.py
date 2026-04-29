@@ -6,39 +6,41 @@ from app.crud import user as crud_user
 from app.core.security import verify_password_hash, create_access_token
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.enums import UserRole
+from app.services.user_service import _sign_up_user
+from app.services.exceptions import UserAlreadyExistError
+
 router = APIRouter()
-def sign_up_user(
-        user_data: schema_user.UserCreate,
-        db: Session,
-        role: UserRole = UserRole.LANDLORD
-):
-    user_exist = crud_user.get_user_by_email(db=db, email=user_data.email.lower())
-
-    if user_exist:
-        raise HTTPException(
-            status_code=400,
-            detail=f'User with email: {user_data.email} already exists'
-        )
-
-    return crud_user.create_user(db=db, user_data=user_data, role=role)
 
 
 
 
-@router.post('/register/landord', response_model=schema_user.UserResponse)
+@router.post('/register/landord', response_model=schema_user.UserResponse, status_code=201)
 def register_landlord(
         user_data: schema_user.UserCreate,
         db: Session = Depends(get_db)
 ):
-    return sign_up_user(user_data=user_data, db=db)
+    try:
+        return  _sign_up_user(user_data=user_data, db=db)
+    except UserAlreadyExistError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
 
 
-@router.post('/register/tenant', response_model=schema_user.UserResponse)
+@router.post('/register/tenant', response_model=schema_user.UserResponse, status_code=201)
 def register_tenant(
         user_data: schema_user.UserCreate,
         db: Session = Depends(get_db)
 ):
-    return sign_up_user(user_data=user_data, db=db, role =UserRole.TENANT)
+    try:
+        return _sign_up_user(user_data=user_data, db=db, role=UserRole.TENANT)
+
+    except UserAlreadyExistError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
 
 @router.post('/login')
 def login_user(
@@ -49,24 +51,15 @@ def login_user(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Invalid email or password'
     )
-    user = crud_user.get_user_by_email(db=db, email=form_data.username.lower())
+    authenticated_user = crud_user.authenticate_user(db, email=form_data.username, password=form_data.password)
 
 
-    if not user :
-        raise unauthorized_exception
-
-    verified_password = verify_password_hash(
-        plain_password=form_data.password,
-        hashed_password=user.hashed_password
-
-    )
-
-    if not verified_password:
+    if not authenticated_user :
         raise unauthorized_exception
 
 
     access_token = create_access_token(
-        subject=user.id
+        subject=authenticated_user.id
     )
 
 

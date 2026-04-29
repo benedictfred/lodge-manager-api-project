@@ -18,3 +18,4 @@ class UserResponse(UserBase):
     role: UserRole
 
     model_config = {'from_attributes': True}
+

@@ -4,32 +4,32 @@
 **Concept Focus:** Authentication, Password Hashing, JWT Statelessness.
 
 ### 📝 Pending Tasks
-- [ ] **Task 1.4:** Implement secure password hashing utility functions using `passlib`.
-- [ ] **Task 1.4.1:** Install `passlib[bcrypt]` and `python-multipart` (if not already in `requirements.txt`).
-- [ ] **Task 1.4.2:** Create `app/core/security.py` file.
-- [ ] **Task 1.4.3:** Implement `get_password_hash(password: str) -> str` using `bcrypt` in `app/core/security.py`.
-- [ ] **Task 1.4.4:** Implement `verify_password(plain_password: str, hashed_password: str) -> bool` using `bcrypt` in `app/core/security.py`.
-- [ ] **Task 1.5:** Build the `create_landlord` CRUD operation.
-- [ ] **Task 1.5.1:** Create `app/crud/user.py` file.
-- [ ] **Task 1.5.2:** Implement `create_user(db: Session, user: UserCreate) -> User` in `app/crud/user.py`. This function should:
+- [x ] **Task 1.4:** Implement secure password hashing utility functions using `passlib`.
+- [ x] **Task 1.4.1:** Install `passlib[bcrypt]` and `python-multipart` (if not already in `requirements.txt`).
+- [ x] **Task 1.4.2:** Create `app/core/security.py` file.
+- [ x] **Task 1.4.3:** Implement `get_password_hash(password: str) -> str` using `bcrypt` in `app/core/security.py`.
+- [x ] **Task 1.4.4:** Implement `verify_password(plain_password: str, hashed_password: str) -> bool` using `bcrypt` in `app/core/security.py`.
+- [x ] **Task 1.5:** Build the `create_landlord` CRUD operation.
+- [ x] **Task 1.5.1:** Create `app/crud/user.py` file.
+- [x ] **Task 1.5.2:** Implement `create_user(db: Session, user: UserCreate) -> User` in `app/crud/user.py`. This function should:
     - Hash the `user.password` using `get_password_hash`.
     - Create a new `User` model instance with the hashed password.
     - Add the user to the database session, commit, and refresh.
-- [ ] **Task 1.5.3:** Implement `get_user_by_email(db: Session, email: str) -> User | None` in `app/crud/user.py`.
-- [ ] **Task 1.6:** Build the `POST /auth/register` API Router.
-- [ ] **Task 1.6.1:** Create `app/api/v1/auth.py` file.
-- [ ] **Task 1.6.2:** Define a FastAPI `APIRouter` for authentication endpoints.
-- [ ] **Task 1.6.3:** Implement the `POST /auth/register` endpoint that:
+- [x ] **Task 1.5.3:** Implement `get_user_by_email(db: Session, email: str) -> User | None` in `app/crud/user.py`.
+- [x ] **Task 1.6:** Build the `POST /auth/register` API Router.
+- [x ] **Task 1.6.1:** Create `app/api/v1/auth.py` file.
+- [ x] **Task 1.6.2:** Define a FastAPI `APIRouter` for authentication endpoints.
+- [ x] **Task 1.6.3:** Implement the `POST /auth/register` endpoint that:
     - Accepts `UserCreate` schema.
     - Checks if a user with the given email already exists (using `get_user_by_email`). If so, raise `HTTPException(status_code=400, detail="Email already registered")`.
     - Calls `crud.create_user` to create the new user.
     - Returns `UserResponse` of the newly created user.
-- [ ] **Task 1.7:** Build the `POST /auth/token` (login) API Router.
-- [ ] **Task 1.7.1:** Implement `authenticate_user(db: Session, email: str, password: str) -> User | None` in `app/crud/user.py`. This function should:
+- [ x] **Task 1.7:** Build the `POST /auth/token` (login) API Router.
+- [ x] **Task 1.7.1:** Implement `authenticate_user(db: Session, email: str, password: str) -> User | None` in `app/crud/user.py`. This function should:
     - Get the user by email.
     - Verify the provided password against the hashed password using `verify_password`.
     - Return the user if authenticated, else `None`.
-- [ ] **Task 1.7.2:** Implement `create_access_token(data: dict, expires_delta: timedelta | None = None) -> str` in `app/core/security.py`.
+- [ x] **Task 1.7.2:** Implement `create_access_token(data: dict, expires_delta: timedelta | None = None) -> str` in `app/core/security.py`.
 - [ ] **Task 1.7.3:** Implement the `POST /auth/token` endpoint that:
     - Accepts `OAuth2PasswordRequestForm` (from `fastapi.security`).
     - Authenticates the user using `authenticate_user`. If not, raise `HTTPException(status_code=401, detail="Incorrect username or password")`.
