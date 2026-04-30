@@ -3,13 +3,12 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
-from app.core.enums import UserRole
 from app.schemas import lodge as lodge_schema
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.crud import lodge as crud_lodge
 from app.services import lodge_service
-from app.services.exceptions import LodgeAlreadyExistError
+from app.services.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
 
 router = APIRouter()
 
@@ -28,7 +27,7 @@ def register_lodge(
         )
 
     try:
-        return lodge_service.create_lodge(
+        return lodge_service.process_new_lodge(
             db=db,
             landlord_id=current_user.id,
             lodge_in=lodge_in
@@ -47,13 +46,14 @@ def get_lodge_by_id(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    lodge = crud_lodge.get_lodge(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
-    if not lodge:
+    try:
+        return lodge_service.get_lodge_by_id(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
+
+    except LodgeNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail='Lodge not found'
+            detail = str(error)
         )
-    return lodge
 
 @router.get('/', response_model=List[lodge_schema.LodgeResponse])
 def get_lodges_by_landlord(
@@ -73,10 +73,20 @@ def update_lodge_details(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    lodge = crud_lodge.get_lodge(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
+    try:
+        return lodge_service.update_lodge_details(
+            db=db, lodge_id=lodge_id,
+            landlord_id=current_user.id,
+            update_data=update_data
+        )
 
-    if not lodge:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Lodge not found.')
-    return crud_lodge.update_lodge(db, db_lodge=lodge, lodge_data=update_data)
+    except LodgeNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+
+
 
 

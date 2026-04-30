@@ -7,3 +7,8 @@ class UserAlreadyExistError(Exception):
 class LodgeAlreadyExistError(Exception):
     def __init__(self, msg:str):
         super().__init__(msg)
+
+
+class LodgeNotFoundError(Exception):
+    def __init__(self, msg: str):
+        super().__init__(msg)

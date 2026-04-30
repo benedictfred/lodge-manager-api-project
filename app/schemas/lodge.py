@@ -1,4 +1,5 @@
 from datetime import  datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -21,4 +22,6 @@ class LodgeResponse(LodgeBase):
 
 
 class LodgeUpdate(BaseModel):
-    pass
+    name: Optional[str] = None
+    address: Optional[str] = None
+
