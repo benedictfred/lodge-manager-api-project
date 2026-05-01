@@ -1,10 +1,15 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime
 from app.core.enums import UserRole
 
 
 class UserBase(BaseModel):
     email: EmailStr
+
+    @field_validator('email', mode='before')
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return value.strip().lower()
 
 
 class UserCreate(UserBase):

@@ -24,9 +24,9 @@ if config.config_file_name is not None:
 # from app.models.lease import Lease
 # from app.models.payment import  Payment
 from app.models.lodge import Lodge
-# from app.models.room import  Room
+from app.models.room import  Room
 from app.models.user import User
-from app.core.enums import UserRole
+from app.core.enums import UserRole, RoomStatus
 from app.core.config import settings
 from app.db.session import Base
 target_metadata = Base.metadata

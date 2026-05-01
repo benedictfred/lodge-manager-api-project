@@ -1,13 +1,14 @@
-from typing import List, Optional
-
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from app.crud import room as crud_room
 from app.schemas import room as schema_room
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
-from app.models.user import LandLord
-router = APIRouter()
+from app.models.user import User
+from app.services import room_service
+from app.services.exceptions import LodgeNotFoundError, RoomNotFoundError, RoomAlreadyExistError
 
+router = APIRouter()
 
 
 @router.get('/', response_model=List[schema_room.RoomResponse])
@@ -15,32 +16,39 @@ def get_all_rooms(
         skip: int = 0,
         limit: int = 10,
         db: Session = Depends(get_db),
-        current_user: LandLord = Depends(get_current_user)
+        current_user: User = Depends(get_current_user)
 ):
-    return crud_room.get_rooms(db=db,skip=skip, max_limit=limit)
+    return crud_room.get_rooms(db=db, skip=skip, max_limit=limit)
 
 
-@router.post('/create-room', response_model=schema_room.RoomResponse)
+@router.post('/create-room/{lodge_id}/rooms', response_model=schema_room.RoomResponse)
 def create_room(
+        lodge_id: int,
         room_in: schema_room.RoomCreate,
         db: Session = Depends(get_db),
-        current_user: LandLord = Depends(get_current_user)
+        current_user: User = Depends(get_current_user)
 ):
-    room = crud_room.get_room_by_number(db=db, room_no=room_in.room_no)
-
-    if room:
+    try:
+        return room_service.create_room_for_lodge(db=db, room_in=room_in, lodge_id=lodge_id,
+                                                  landlord_id=current_user.id)
+    except RoomAlreadyExistError as error:
         raise HTTPException(
             status_code=400,
-            detail=f'Room {room_in.room_no} already exists'
+            detail=str(error)
         )
-    return crud_room.create_room(db=db, room_data=room_in)
+
+    except LodgeNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error)
+        )
 
 
 @router.get('/{room_id}', response_model=schema_room.RoomResponse)
 def get_room(
         room_id: int,
         db: Session = Depends(get_db),
-        current_user: LandLord = Depends(get_current_user)
+        current_user: User = Depends(get_current_user)
 ):
     room = crud_room.get_room(db=db, room_id=room_id)
 
@@ -57,7 +65,7 @@ def update_room_by_room_no(
         room_no: str,
         update_data: schema_room.RoomUpdate,
         db: Session = Depends(get_db),
-        current_user: LandLord = Depends(get_current_user)
+        current_user: User = Depends(get_current_user)
 ):
     room = crud_room.get_room_by_number(db=db, room_no=room_no)
 
@@ -67,8 +75,3 @@ def update_room_by_room_no(
             detail='Room not found'
         )
     return crud_room.update_room(db=db, room_data=update_data, db_room=room)
-
-
-
-
-

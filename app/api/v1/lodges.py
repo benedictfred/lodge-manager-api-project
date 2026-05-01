@@ -27,7 +27,7 @@ def register_lodge(
         )
 
     try:
-        return lodge_service.process_new_lodge(
+        return lodge_service.create_new_loge_for_landlord(
             db=db,
             landlord_id=current_user.id,
             lodge_in=lodge_in
@@ -47,7 +47,7 @@ def get_lodge_by_id(
         current_user: User = Depends(get_current_user)
 ):
     try:
-        return lodge_service.get_lodge_by_id(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
+        return lodge_service.get_lodge_for_landlord(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
 
     except LodgeNotFoundError as error:
         raise HTTPException(
@@ -74,7 +74,7 @@ def update_lodge_details(
         db: Session = Depends(get_db)
 ):
     try:
-        return lodge_service.update_lodge_details(
+        return lodge_service.update_landlord_lodge(
             db=db, lodge_id=lodge_id,
             landlord_id=current_user.id,
             update_data=update_data

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from app.models.room import RoomStatus
 from datetime import datetime
@@ -10,6 +10,11 @@ class RoomBase(BaseModel):
     description: Optional[str] = None
     base_rent_price: int= Field(default=200000, le=9999999999999)
     status: RoomStatus = RoomStatus.VACANT
+
+    @field_validator('room_no','description')
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return value.strip().lower()
 
 class RoomCreate(RoomBase):
     pass

@@ -39,6 +39,7 @@ def register_tenant(
             detail=str(error)
         )
 
+
 @router.post('/login')
 def login_user(
         db: Session = Depends(get_db),
@@ -48,7 +49,7 @@ def login_user(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Invalid email or password'
     )
-    authenticated_user = authenticate_user(db, email=form_data.username, password=form_data.password)
+    authenticated_user = authenticate_user(db, email=form_data.username.lower(), password=form_data.password)
 
 
     if not authenticated_user :

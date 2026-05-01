@@ -4,15 +4,15 @@ from app.schemas.room import RoomCreate, RoomUpdate
 from sqlalchemy.orm import Session
 
 
-def get_room_by_number(db: Session, room_no: str):
+def get_room_by_lodge_and_number(db: Session, room_no: str, lodge_id: int):
     """Retrieve a specific room by its room number."""
-    return db.query(Room).filter(Room.room_no == room_no).first()
+    return db.query(Room).filter(Room.room_no == room_no, Room.lodge_id == lodge_id).first()
 
 
-def create_room(db: Session, room_data: RoomCreate):
+def create_room(db: Session, room_data: RoomCreate, lodge_id: int):
     """Create a new room record in the database."""
     # Convert the Pydantic schema to a dictionary and unpack into the SQLAlchemy model
-    db_room = Room(**room_data.model_dump())
+    db_room = Room(**room_data.model_dump(), lodge_id=lodge_id)
 
     db.add(db_room)
     db.commit()

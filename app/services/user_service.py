@@ -11,7 +11,7 @@ def sign_up_user(
         db: Session,
         role: UserRole = UserRole.LANDLORD
 ):
-    user_exist = crud_user.get_user_by_email(db=db, email=user_data.email.lower())
+    user_exist = crud_user.get_user_by_email(db=db, email=user_data.email)
 
     if user_exist:
         raise UserAlreadyExistError(email=user_exist.email)

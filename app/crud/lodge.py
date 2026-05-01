@@ -5,9 +5,9 @@ from app.schemas.lodge import LodgeCreate, LodgeUpdate
 
 # crud_lodge.py
 def create_lodge(db: Session, lodge_data: LodgeCreate, landlord_id: int):
+    lodge_name = lodge_data.name.lower()
     # The CRUD layer just takes the raw integer and builds the row
-    db_lodge = Lodge(**lodge_data.model_dump())
-    db_lodge.landlord_id = landlord_id
+    db_lodge = Lodge(**lodge_data.model_dump(), landlord_id=landlord_id, )
 
     db.add(db_lodge)
     db.commit()
@@ -24,10 +24,11 @@ def get_lodges(db: Session, landlord_id: int, skip: int= 0, limit: int =50):
     return db.query(Lodge).filter(Lodge.landlord_id == landlord_id).offset(skip).limit(limit).all()
 
 
-def get_lodge(db:Session, landlord_id: int , lodge_id):
+def get_lodge(db:Session,  lodge_id):
+    return db.query(Lodge).filter(Lodge.id == lodge_id).first()
+
+def get_lodge_by_landlord(db: Session, landlord_id: int, lodge_id: int):
     return db.query(Lodge).filter(Lodge.landlord_id == landlord_id, Lodge.id == lodge_id).first()
-
-
 
 def update_lodge(db: Session, db_lodge: Lodge, lodge_data: LodgeUpdate):
 

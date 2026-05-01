@@ -5,13 +5,14 @@ from app.core.security import get_password_hash
 from app.core.enums import UserRole
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email.lower()).first()
+    print(f'User input email: {email}')
+    return db.query(User).filter(User.email == email).first()
 
 
 def create_user(db: Session, user_data: UserCreate, role: UserRole) -> User:
     hashed_password = get_password_hash(user_data.password)
     db_user = User(
-        email=user_data.email.lower(),
+        email=user_data.email,
         hashed_password=hashed_password,
         role=role
     )
