@@ -2,7 +2,7 @@ from app.schemas import room as schema_room
 from app.crud import room as crud_room
 from sqlalchemy.orm import Session
 from app.services import lodge_service
-from app.services.exceptions import RoomNotFoundError, RoomAlreadyExistError
+from app.core.exceptions import RoomAlreadyExistError
 
 
 #check if lodge exist -> proceed

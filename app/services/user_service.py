@@ -1,9 +1,8 @@
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.schemas import user as schema_user
 from app.crud.user import crud_user
 from app.core.enums import UserRole
-from .exceptions import UserAlreadyExistError
+from app.core.exceptions import UserAlreadyExistError
 from app.core.security import verify_password_hash
 
 

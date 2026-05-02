@@ -7,7 +7,7 @@ from app.db.session import  SessionLocal
 from typing import Generator
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
-from app.crud import user as crud_user
+from app.crud.user import crud_user
 
 
 #helps to extract token from http request
@@ -44,7 +44,7 @@ def get_current_user(
     except (jwt.PyJWTError, ValueError, ValidationError):
         raise credentials_exception
 
-    user = crud_user.get_user_by_id(db=db,user_id=user_id)
+    user = crud_user.get(db=db,item_id=user_id)
 
     if not user:
         raise HTTPException(

@@ -6,7 +6,7 @@ from app.core.security import  create_access_token
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.enums import UserRole
 from app.services.user_service import sign_up_user, authenticate_user
-from app.services.exceptions import UserAlreadyExistError
+from app.core.exceptions import UserAlreadyExistError
 
 router = APIRouter()
 

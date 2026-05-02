@@ -6,9 +6,9 @@ from app.api.deps import get_db
 from app.schemas import lodge as lodge_schema
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.crud import lodge as crud_lodge
+from app.crud.lodge import crud_lodge
 from app.services import lodge_service
-from app.services.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
+from app.core.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
 
 router = APIRouter()
 
@@ -63,7 +63,7 @@ def get_lodges_by_landlord(
         limit: int = 50
 ):
 
-    return crud_lodge.get_multi(db=db, landlord_id=current_user.id, skip=skip, limit=limit)
+    return crud_lodge.get_multi_by_owner(db=db, landlord_id=current_user.id, skip=skip, limit=limit)
 
 
 @router.patch('/{lodge_id}', response_model=lodge_schema.LodgeResponse)

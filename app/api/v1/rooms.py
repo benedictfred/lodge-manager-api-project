@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.services import room_service
-from app.services.exceptions import LodgeNotFoundError, RoomNotFoundError, RoomAlreadyExistError
+from app.core.exceptions import LodgeNotFoundError, RoomAlreadyExistError
 
 router = APIRouter()
 
