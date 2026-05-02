@@ -1,14 +1,42 @@
 from sqlalchemy.orm import Session
+from typing import Generic, Type, TypeVar, Unpack
+from pydantic import BaseModel
+from app.schemas.generic_extras import GenericExtras
+
+ModelType = TypeVar('ModelType')
+CreateSchemaType = TypeVar('CreateSchemaType', bound=BaseModel)
+UpdateSchemaType = TypeVar('UpdateSchemaType', bound=BaseModel)
 
 
-def get():
-    pass
+class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(self, model: Type[ModelType]):
+        self.model = model
 
-def get_multi():
-    pass
+    def get(self, db: Session, item_id: int):
+        return db.query(self.model).filter(self.model.id == item_id).first()
 
-def create():
-    pass
+    def get_multi(self, db:Session, item_id: int, skip: int = 0, limit: int =100):
+        return db.query(self.model).filter(self.model.id == item_id).offset(skip).limit(limit).all()
 
-def update():
-    pass
+    def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs: Unpack[GenericExtras]):
+        db_object = self.model(**obj_in.model_dump(), **kwargs)
+        db.add(db_object)
+        db.commit()
+        db.refresh(db_object)
+        return db_object
+
+    def update(self, db: Session, update_data: UpdateSchemaType):
+        update_dict = update_data.model_dump(exclude_unset=True)
+
+        for key, value in update_dict.items():
+            setattr(self.model, key, value)
+
+        db.add(self.model)
+        db.commit()
+        db.refresh(self.model)
+        return self.model
+
+
+
+
+

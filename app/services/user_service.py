@@ -1,22 +1,24 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.schemas import user as schema_user
-from app.crud import user as crud_user
+from app.crud.user import crud_user
 from app.core.enums import UserRole
 from .exceptions import UserAlreadyExistError
 from app.core.security import verify_password_hash
+
 
 def sign_up_user(
         user_data: schema_user.UserCreate,
         db: Session,
         role: UserRole = UserRole.LANDLORD
 ):
-    user_exist = crud_user.get_user_by_email(db=db, email=user_data.email)
+    user = crud_user.get_user_by_email(db=db, email=user_data.email)
 
-    if user_exist:
-        raise UserAlreadyExistError(email=user_exist.email)
+    if user:
+        raise UserAlreadyExistError(email=user.email)
 
-    return crud_user.create_user(db=db, user_data=user_data, role=role)
+    return crud_user.create(db=db, obj_in=user_data, role=role)
+
 
 def authenticate_user(db: Session, email: str, password: str):
     """

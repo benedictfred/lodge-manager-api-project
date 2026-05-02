@@ -63,7 +63,7 @@ def get_lodges_by_landlord(
         limit: int = 50
 ):
 
-    return crud_lodge.get_lodges(db=db, landlord_id=current_user.id, skip=skip, limit=limit)
+    return crud_lodge.get_multi(db=db, landlord_id=current_user.id, skip=skip, limit=limit)
 
 
 @router.patch('/{lodge_id}', response_model=lodge_schema.LodgeResponse)
