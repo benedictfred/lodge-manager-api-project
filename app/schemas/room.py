@@ -5,6 +5,7 @@ from datetime import datetime
 
 
 
+
 class RoomBase(BaseModel):
     room_no: str
     description: Optional[str] = None

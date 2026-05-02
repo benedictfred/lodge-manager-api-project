@@ -47,7 +47,7 @@ def get_lodge_by_id(
         current_user: User = Depends(get_current_user)
 ):
     try:
-        return lodge_service.get_lodge_for_landlord(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
+        return lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
 
     except LodgeNotFoundError as error:
         raise HTTPException(

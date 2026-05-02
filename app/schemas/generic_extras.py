@@ -4,3 +4,4 @@ from app.core.enums import UserRole
 class GenericExtras(TypedDict):
     role: UserRole
     landlord_id: int
+    lodge_id: int

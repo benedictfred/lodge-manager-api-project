@@ -1,27 +1,40 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from app.crud import room as crud_room
+from app.crud.room import crud_room
 from app.schemas import room as schema_room
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.services import room_service
-from app.core.exceptions import LodgeNotFoundError, RoomAlreadyExistError
+from app.core.exceptions import LodgeNotFoundError, RoomAlreadyExistError, RoomNotFoundError
 
 router = APIRouter()
 
 
-@router.get('/', response_model=List[schema_room.RoomResponse])
+@router.get('/{lodge_id}/rooms', response_model=List[schema_room.RoomResponse])
 def get_all_rooms(
+        lodge_id: int,
         skip: int = 0,
         limit: int = 10,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    return crud_room.get_rooms(db=db, skip=skip, max_limit=limit)
+    try:
+        return room_service.get_lodge_rooms(
+            db,
+            lodge_id=lodge_id,
+            landlord_id=current_user.id,
+            skip=skip,
+            limit=limit
+        )
+    except LodgeNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
 
 
-@router.post('/create-room/{lodge_id}/rooms', response_model=schema_room.RoomResponse)
+@router.post('/{lodge_id}', response_model=schema_room.RoomResponse)
 def create_room(
         lodge_id: int,
         room_in: schema_room.RoomCreate,
@@ -29,8 +42,12 @@ def create_room(
         current_user: User = Depends(get_current_user)
 ):
     try:
-        return room_service.create_room_for_lodge(db=db, room_in=room_in, lodge_id=lodge_id,
-                                                  landlord_id=current_user.id)
+        return room_service.create_room_for_lodge(
+            db=db, room_in=room_in,
+            lodge_id=lodge_id,
+            landlord_id=current_user.id
+        )
+
     except RoomAlreadyExistError as error:
         raise HTTPException(
             status_code=400,
@@ -44,20 +61,28 @@ def create_room(
         )
 
 
-@router.get('/{room_id}', response_model=schema_room.RoomResponse)
+@router.get('/{lodge_id}/rooms/{room_id}', response_model=schema_room.RoomResponse)
 def get_room(
+        lodge_id: int,
         room_id: int,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    room = crud_room.get_room(db=db, room_id=room_id)
 
-    if not room:
+    try:
+        room = room_service.get_room_details(db, lodge_id=lodge_id, landlord_id=current_user.id, room_id=room_id)
+        return room
+    except LodgeNotFoundError as e:
         raise HTTPException(
             status_code=404,
-            detail=f'Room not found'
+            detail= str(e)
         )
-    return room
+    except RoomNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
+
 
 
 @router.patch('/', response_model=schema_room.RoomResponse)
@@ -74,4 +99,4 @@ def update_room_by_room_no(
             status_code=404,
             detail='Room not found'
         )
-    return crud_room.update_room(db=db, room_data=update_data, db_room=room)
+    return crud_room.update(db=db, room_data=update_data, db_room=room)

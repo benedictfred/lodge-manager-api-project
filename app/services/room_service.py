@@ -1,15 +1,14 @@
+from app.crud.lodge import crud_lodge
 from app.schemas import room as schema_room
-from app.crud import room as crud_room
+from app.crud.room import crud_room
 from sqlalchemy.orm import Session
 from app.services import lodge_service
-from app.core.exceptions import RoomAlreadyExistError
+from app.core.exceptions import RoomAlreadyExistError, LodgeNotFoundError, RoomNotFoundError
 
 
-#check if lodge exist -> proceed
-#check if room exist -> error
-#
+
 def create_room_for_lodge(db:Session,  room_in: schema_room.RoomCreate, lodge_id: int, landlord_id: int):
-    lodge_service.get_lodge_for_landlord(db=db, lodge_id=lodge_id, landlord_id=landlord_id)
+    lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=landlord_id)
 
     room = crud_room.get_room_by_lodge_and_number(db=db, room_no=room_in.room_no, lodge_id=lodge_id)
 
@@ -17,15 +16,31 @@ def create_room_for_lodge(db:Session,  room_in: schema_room.RoomCreate, lodge_id
         print('room exists, waiting to check if room exist in lodge')
         raise RoomAlreadyExistError(room_in.room_no)
 
-    return crud_room.create_room(db=db, room_data=room_in, lodge_id=lodge_id)
+    return crud_room.create(db=db, obj_in=room_in, lodge_id=lodge_id)
 
-
-def get_lodge_rooms():
+def verify_room_existence_by_lodge(db:Session, room_id: int, lodge_id: int):
+    room = crud_room.get(db, item_id=room_id)
     pass
 
 
-def get_room_details():
-    pass
+def get_lodge_rooms(db: Session, lodge_id: int, landlord_id, skip: int, limit: int):
+    lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=landlord_id)
+
+    return crud_room.get_rooms(db, lodge_id=lodge_id, skip=skip, max_limit=limit)
+
+
+
+def get_room_details(db: Session, lodge_id: int, room_id: int, landlord_id: int):
+
+    lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_id)
+
+    room = crud_room.get(db, item_id=room_id)
+    room_exist_in_lodge = room.lodge_id != lodge_id
+
+    if not room or room_exist_in_lodge:
+        raise RoomNotFoundError()
+
+    return room
 
 
 def update_room_details():
