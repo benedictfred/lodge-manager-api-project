@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_db
+from app.api.deps import get_db, get_landlord_user
 from app.schemas import lodge as lodge_schema
 from app.api.deps import get_current_user
 from app.models.user import User
@@ -16,20 +16,13 @@ router = APIRouter()
 def register_lodge(
         lodge_in: lodge_schema.LodgeCreate,
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        landlord_user: User = Depends(get_landlord_user)
 
 ):
-
-    if not lodge_service.is_landlord(current_user.role):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only landlords can manage lodges'
-        )
-
     try:
         return lodge_service.create_new_loge_for_landlord(
             db=db,
-            landlord_id=current_user.id,
+            landlord_id=landlord_user.id,
             lodge_in=lodge_in
         )
     except LodgeAlreadyExistError as error:
@@ -58,25 +51,25 @@ def get_lodge_by_id(
 @router.get('/', response_model=List[lodge_schema.LodgeResponse])
 def get_lodges_by_landlord(
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user),
+        landlord_user: User = Depends(get_landlord_user),
         skip: int = 0,
         limit: int = 50
 ):
 
-    return crud_lodge.get_multi_by_owner(db=db, landlord_id=current_user.id, skip=skip, limit=limit)
+    return crud_lodge.get_multi_by_owner(db=db, landlord_id=landlord_user.id, skip=skip, limit=limit)
 
 
 @router.patch('/{lodge_id}', response_model=lodge_schema.LodgeResponse)
 def update_lodge_details(
         lodge_id: int,
         update_data: lodge_schema.LodgeUpdate,
-        current_user: User = Depends(get_current_user),
+        landlord_user: User = Depends(get_landlord_user),
         db: Session = Depends(get_db)
 ):
     try:
         return lodge_service.update_landlord_lodge(
             db=db, lodge_id=lodge_id,
-            landlord_id=current_user.id,
+            landlord_id=landlord_user.id,
             update_data=update_data
         )
 

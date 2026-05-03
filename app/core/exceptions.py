@@ -20,3 +20,4 @@ class RoomNotFoundError(Exception):
 class RoomAlreadyExistError(Exception):
     def __init__(self, room_name: str):
         super().__init__(f'Room with that name: {room_name} already exists')
+

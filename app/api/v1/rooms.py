@@ -85,18 +85,33 @@ def get_room(
 
 
 
-@router.patch('/', response_model=schema_room.RoomResponse)
-def update_room_by_room_no(
-        room_no: str,
+@router.patch('/{lodge_id}/rooms/{room_id}', response_model=schema_room.RoomResponse)
+def update_room_by_id(
+        lodge_id: int,
+        room_id: int,
         update_data: schema_room.RoomUpdate,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    room = crud_room.get_room_by_number(db=db, room_no=room_no)
+    #does the lodge exist and owned by landlord
+    #does the room exist and exist in lodge
 
-    if not room:
+    try:
+        updated_room = room_service.update_room_details(
+            db, room_id=room_id,
+            lodge_id=lodge_id,
+            update_data=update_data,
+            landlord_id=current_user.id
+        )
+        return updated_room
+    except RoomNotFoundError as e:
+        raise HTTPException(
+            status_code= 404,
+            detail = str(e)
+        )
+    except LodgeNotFoundError as e:
         raise HTTPException(
             status_code=404,
-            detail='Room not found'
+            detail=str(e)
         )
-    return crud_room.update(db=db, room_data=update_data, db_room=room)
+

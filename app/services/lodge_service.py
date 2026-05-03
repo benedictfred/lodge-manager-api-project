@@ -33,5 +33,5 @@ def verify_lodge_ownership(db: Session, lodge_id:int, landlord_id: int):
 def update_landlord_lodge(db:Session, lodge_id: int, landlord_id: int, update_data: LodgeUpdate):
     lodge = verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=landlord_id)
 
-    return crud_lodge.update(db=db, update_data=update_data, db_lodge=lodge)
+    return crud_lodge.update(db=db, update_data=update_data, db_obj=lodge)
 
