@@ -37,10 +37,10 @@ def register_lodge(
 def get_lodge_by_id(
         lodge_id: int,
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+        landlord_user: User = Depends(get_landlord_user)
 ):
     try:
-        return lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=current_user.id)
+        return lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=landlord_user.id)
 
     except LodgeNotFoundError as error:
         raise HTTPException(
