@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime
 from app.core.enums import UserRole
@@ -29,4 +31,7 @@ class UserResponse(UserBase):
     model_config = {'from_attributes': True}
 
 class UserUpdate(BaseModel):
-    pass
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_no: Optional[str] = None
+    email: Optional[EmailStr] = None

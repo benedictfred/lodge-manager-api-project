@@ -1,6 +1,6 @@
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate, UserUpdate
 from typing import Optional
-from app.core.enums import TenantType
+from app.core.enums import TenantType, StudentLevel
 from pydantic import EmailStr, Field
 
 
@@ -8,11 +8,13 @@ class TenantBase(UserCreate):
     tenant_type: TenantType
 
 
-class TenantCreate(TenantBase):
-    pass
+class TenantProfileCreate(TenantBase):
+    level: Optional[StudentLevel] = None
+    reg_no: Optional[int] = None
+    department: Optional[str] = None
 
 
-class TenantResponse(TenantCreate):
+class TenantProfileResponse(TenantProfileCreate):
     id: int
     is_active: bool
     created_at: datetime
@@ -22,8 +24,8 @@ class TenantResponse(TenantCreate):
         from_attributes = True
 
 
-class TenantUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone_no: Optional[str] = Field(None, max_length=15)
-    email: Optional[EmailStr] = None
+class TenantProfileUpdate(UserUpdate):
+    tenant_type: Optional[TenantType] = None
+    level = Optional[StudentLevel] = None
+    reg_no: Optional[int] = None
+    department: Optional[str] = None

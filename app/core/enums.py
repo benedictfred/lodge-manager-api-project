@@ -14,3 +14,11 @@ class RoomStatus(str, Enum):
 class TenantType(str, Enum):
     STUDENT = 'student'
     OTHERS = 'others'
+
+class StudentLevel(str, Enum):
+    LEVEL_100 = '100'
+    LEVEL_200 = '200'
+    LEVEL_300 = '300'
+    LEVEL_400 = '400'
+    LEVEL_500 = '500'
+    LEVEL_600 = '600'
