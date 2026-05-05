@@ -38,3 +38,8 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
     phone_no: Optional[str] = None
     email: Optional[EmailStr] = None
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = 'bearer'
+

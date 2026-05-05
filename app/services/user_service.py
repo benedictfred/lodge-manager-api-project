@@ -21,7 +21,7 @@ def sign_up_landlord(
     hashed = get_password_hash(landlord_data.password)
 
     base_user_data = UserInternal(
-        landlord_data.model_dump(exclude={'password'}),
+        **landlord_data.model_dump(exclude={'password'}),
         hashed_password=hashed,
         role=UserRole.LANDLORD
     )
