@@ -15,3 +15,5 @@ class Lodge(Base):
     is_active = Column(Boolean, default=True, nullable=True)
     owner = relationship('User', back_populates='lodges')
     rooms = relationship("Room", back_populates='lodge', cascade='all, delete-orphan')
+    tenantprofiles = relationship('TenantProfile', back_populates='lodge', cascade='all, delete-orphan')
+

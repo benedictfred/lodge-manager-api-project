@@ -9,6 +9,7 @@ class TenantProfile(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
+    lodge_id = Column(Integer, ForeignKey('tenant_profiles.id', ondelete='CASCADE'), nullable=False, unique=True)
     tenant_type = Column(Enum(TenantType), nullable=False, default=TenantType.STUDENT)
     emergency_contact_name = Column(String(20), nullable=False,  index=True)
     emergency_contact_phone_no = Column(String, nullable=False)
@@ -16,6 +17,7 @@ class TenantProfile(Base):
     department = Column(String, nullable=True)
     reg_no = Column(String, nullable=True)
     user = relationship('User', back_populates='tenant_profile', cascade='all, delete-orphan', single_parent=True)
+    lodge = relationship('Lodge', back_populates='tenantprofiles', cascade='all, delete-orphan')
     # leases = relationship('Lease', back_populates='tenant')
 
     @property

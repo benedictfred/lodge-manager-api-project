@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: c24b45b6650a
+Revision ID: fc32d116fad1
 Revises: 
-Create Date: 2026-05-04 15:49:48.836027
+Create Date: 2026-05-05 19:49:35.530148
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c24b45b6650a'
+revision: str = 'fc32d116fad1'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -50,14 +50,17 @@ def upgrade() -> None:
     op.create_table('tenant_profiles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('lodge_id', sa.Integer(), nullable=False),
     sa.Column('tenant_type', sa.Enum('STUDENT', 'OTHERS', name='tenanttype'), nullable=False),
     sa.Column('emergency_contact_name', sa.String(length=20), nullable=False),
     sa.Column('emergency_contact_phone_no', sa.String(), nullable=False),
     sa.Column('level', sa.Enum('LEVEL_100', 'LEVEL_200', 'LEVEL_300', 'LEVEL_400', 'LEVEL_500', 'LEVEL_600', name='studentlevel'), nullable=True),
     sa.Column('department', sa.String(), nullable=True),
     sa.Column('reg_no', sa.String(), nullable=True),
+    sa.ForeignKeyConstraint(['lodge_id'], ['tenant_profiles.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('lodge_id'),
     sa.UniqueConstraint('user_id')
     )
     with op.batch_alter_table('tenant_profiles', schema=None) as batch_op:
