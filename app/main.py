@@ -20,8 +20,11 @@ app.add_middleware(
 )
 
 app.include_router(user_router, prefix='/api/v1/auth', tags=['Authentication'])
+
 app.include_router(lodge_router, prefix='/api/v1/lodges', tags=['Lodges'])
+
 app.include_router(room_router, prefix='/api/v1/rooms', tags=['Rooms'])
+
 app.include_router(tenant_router, prefix='/api/v1/tenants', tags=['Tenants'])
 # app.include_router(lease_router, prefix='/api/v1/leases', tags=['Leases'])
 # app.include_router(payment_router, prefix='/api/v1/payments', tags=['Payments'])

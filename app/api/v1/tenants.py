@@ -3,53 +3,32 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import LodgeNotFoundError
 from app.services import tenant_services
-from app.schemas import  tenantprofile as schema_tenant
+from app.schemas import tenantprofile as schema_tenant
 from app.crud import tenantprofile as crud_tenant
 from typing import List
 from app.api.deps import get_db, get_current_user, get_landlord_user
 from app.models.user import User
 
-
 router = APIRouter()
-
-@router.get('/{lodge_id}/tenants', response_model=List[schema_tenant.TenantProfileResponse])
-def get_lodge_tenants(
-        lodge_id: int,
-        skip: int = 0,
-        limit: int = 50,
-        db: Session = Depends(get_db),
-        landlord_user: User = Depends(get_landlord_user)
-):
-
-    try:
-        return tenant_services.fetch_lodge_tenants(
-            db,
-            lodge_id=lodge_id,
-            landlord_user=landlord_user,
-            skip=skip,
-            limit=limit
-        )
-    except LodgeNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
-
 
 
 @router.patch('/{tenant_id}')
-def update_tenant_by_id(
+def update_tenant_profile(
+        lodge_id: int,
         tenant_id: int,
-        tenant_data : schema_tenant.TenantProfileUpdate,
+        tenant_data: schema_tenant.TenantProfileUpdate,
         db: Session = Depends(get_db),
-        tenant_user = Depends(get_current_user)
+        tenant_user=Depends(get_current_user)
 ):
+    #only tenants shd be able to update their info
+    #the tenants must belong to a specific lodge
+
     tenant = crud_tenant.get_tenant(db=db, tenant_id=tenant_id)
 
     if not tenant:
         raise HTTPException(
             status_code=404,
-            detail= 'Tenant not found'
+            detail='Tenant not found'
         )
     return crud_tenant.update_tenant(db=db, db_tenant=tenant, tenant_data=tenant_data)
 
@@ -58,7 +37,7 @@ def update_tenant_by_id(
 def get_tenant_by_id(
         tenant_id: int,
         db: Session = Depends(get_db),
-        tenant_user = Depends(get_current_user)
+        tenant_user=Depends(get_current_user)
 ):
     tenant = crud_tenant.get_tenant(db=db, tenant_id=tenant_id)
 
@@ -69,12 +48,12 @@ def get_tenant_by_id(
         )
     return tenant
 
+
 @router.delete('/{tenant_id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_tenant_by_id(
         tenant_id: int,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
-
 
 ):
     tenant = crud_tenant.get_tenant(db=db, tenant_id=tenant_id)
@@ -86,5 +65,4 @@ def delete_tenant_by_id(
         )
 
     crud_tenant.delete_tenant(db=db, db_tenant=tenant)
-
 

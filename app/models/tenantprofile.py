@@ -1,23 +1,27 @@
 from app.core.enums import TenantType, StudentLevel
 from app.db.session import  Base
 from sqlalchemy import Column, String, Integer, Enum, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, mapped_column, Mapped
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.lodge import Lodge
 
 class TenantProfile(Base):
     __tablename__ = 'tenant_profiles'
 
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
-    lodge_id = Column(Integer, ForeignKey('lodges.id', ondelete='CASCADE'), nullable=False, unique=True)
-    tenant_type = Column(Enum(TenantType), nullable=False, default=TenantType.STUDENT)
-    emergency_contact_name = Column(String(20), nullable=False,  index=True)
-    emergency_contact_phone_no = Column(String, nullable=False)
-    level = Column(Enum(StudentLevel), nullable=True)
-    department = Column(String, nullable=True)
-    reg_no = Column(String, nullable=True)
-    user = relationship('User', back_populates='tenant_profile', cascade='all, delete-orphan', single_parent=True)
-    lodge = relationship('Lodge', back_populates='tenantprofiles')
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
+    lodge_id: Mapped[int] = mapped_column(Integer, ForeignKey('lodges.id', ondelete='CASCADE'), nullable=False, unique=True)
+    tenant_type: Mapped[TenantType] = mapped_column(Enum(TenantType), nullable=False, default=TenantType.STUDENT)
+    emergency_contact_name: Mapped[str] = mapped_column(String(20), nullable=False,  index=True)
+    emergency_contact_phone_no: Mapped[str] = mapped_column(String, nullable=False)
+    level: Mapped[StudentLevel] = mapped_column(Enum(StudentLevel), nullable=True)
+    department: Mapped[str] = mapped_column(String, nullable=True)
+    reg_no: Mapped[str] = mapped_column(String, nullable=True)
+    user: Mapped["User"] = relationship('User', back_populates='tenantprofile', cascade='all, delete-orphan', single_parent=True)
+    lodge: Mapped["Lodge"] = relationship('Lodge', back_populates='tenantprofiles')
     # leases = relationship('Lease', back_populates='tenant')
 
     @property

@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_landlord_user
 from app.schemas import lodge as lodge_schema
 from app.api.deps import get_current_user
+from app.schemas import tenantprofile as schema_tenant
 from app.models.user import User
 from app.crud.lodge import crud_lodge
-from app.services import lodge_service
+from app.services import lodge_service, tenant_services
 from app.core.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
 
 router = APIRouter()
@@ -58,6 +59,28 @@ def get_lodges_by_landlord(
 
     return crud_lodge.get_lodges_by_owner(db=db, landlord_id=landlord_user.id, skip=skip, limit=limit)
 
+
+@router.get('/{lodge_id}/tenants', response_model=List[schema_tenant.TenantProfileResponse])
+def get_lodge_tenants(
+        lodge_id: int,
+        skip: int = 0,
+        limit: int = 50,
+        db: Session = Depends(get_db),
+        landlord_user: User = Depends(get_landlord_user)
+):
+    try:
+        return tenant_services.fetch_lodge_tenants(
+            db,
+            lodge_id=lodge_id,
+            landlord_user=landlord_user,
+            skip=skip,
+            limit=limit
+        )
+    except LodgeNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
 
 @router.patch('/{lodge_id}', response_model=lodge_schema.LodgeResponse)
 def update_lodge_details(

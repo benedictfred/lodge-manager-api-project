@@ -68,14 +68,13 @@ def get_room(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-
     try:
         room = room_service.get_room_details(db, lodge_id=lodge_id, landlord_id=current_user.id, room_id=room_id)
         return room
     except LodgeNotFoundError as e:
         raise HTTPException(
             status_code=404,
-            detail= str(e)
+            detail=str(e)
         )
     except RoomNotFoundError as e:
         raise HTTPException(
@@ -84,10 +83,9 @@ def get_room(
         )
 
 
-
-@router.patch('/{lodge_id}/rooms/{room_id}', response_model=schema_room.RoomResponse)
+@router.patch('/{room_id}', response_model=schema_room.RoomResponse)
 def update_room_by_id(
-        lodge_id: int,
+
         room_id: int,
         update_data: schema_room.RoomUpdate,
         db: Session = Depends(get_db),
@@ -99,19 +97,16 @@ def update_room_by_id(
     try:
         updated_room = room_service.update_room_details(
             db, room_id=room_id,
-            lodge_id=lodge_id,
             update_data=update_data,
-            landlord_id=landlord_user.id
         )
         return updated_room
     except RoomNotFoundError as e:
         raise HTTPException(
-            status_code= 404,
-            detail = str(e)
+            status_code=404,
+            detail=str(e)
         )
     except LodgeNotFoundError as e:
         raise HTTPException(
             status_code=404,
             detail=str(e)
         )
-

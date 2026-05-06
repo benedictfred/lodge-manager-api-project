@@ -8,7 +8,7 @@ from app.core.exceptions import UserAlreadyExistError, LodgeNotFoundError
 from app.core.security import  get_password_hash
 from app.models.user import User
 from app.schemas.tenantprofile import TenantProfileCreate
-from app.schemas.user import UserInternal, UserCreate
+from app.schemas.user import UserInternal
 from app.services import lodge_service
 
 
@@ -45,8 +45,6 @@ def fetch_lodge_tenants(
         skip: int,
         limit: int
 ):
-    #check if lodge exist and is owned by landlord
-    #get lodges owned by the landlord
 
     lodge = lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_user.id)
     if not lodge:

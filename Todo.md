@@ -34,29 +34,37 @@
 **Concept Focus:** SQLAlchemy Foreign Keys, UniqueConstraints, Pydantic Nested Schemas, Hierarchical Routing, Exception Bubbling.
 
 ### 📝 Pending Tasks
-- [ ] **Task 2.3:** Refactor `Room` CRUD operations (`app/crud/room.py`) to use exact matches for room numbers, not wildcards.
-- [ ] **Task 2.4:** Build `Room` Service Orchestrator (`app/services/room_service.py`).
-    - Implement `get_room_details(db, lodge_id, room_id, landlord_id)` using explicit database queries for finding the single room to avoid loading large relationship lists into memory.
-    - Implement `get_lodge_rooms(db, lodge_id, landlord_id, skip, limit)` (Here you *can* use relationships if you want to return the lodge object with its nested rooms).
-- [ ] **Task 2.5:** Refactor `Room` API Router (`app/api/v1/rooms.py`) to use hierarchical routing (e.g., `GET /{lodge_id}/rooms/{room_id}`) and catch custom exceptions.
+- [ ] **Task 2.6:** Refactor Room creation to properly resolve relationships (e.g. Lodge validation before Room creation).
+- [ ] **Task 2.7:** Ensure robust exception bubbling from CRUD layer through Service Layer up to Routers.
 
 ### ✅ Completed Tasks
 - [x] **Task 2.1:** Create `Lodge` SQLAlchemy Model (`app/models/lodge.py`).
 - [x] **Task 2.2:** Create `Room` Pydantic Schemas (`app/schemas/room.py`).
+- [x] **Task 2.3:** Refactor `Room` CRUD operations (`app/crud/room.py`) to use exact matches for room numbers, not wildcards.
+- [x] **Task 2.4:** Build `Room` Service Orchestrator (`app/services/room_service.py`).
+- [x] **Task 2.5:** Refactor `Room` API Router (`app/api/v1/rooms.py`) to use hierarchical routing.
 
 ## Epic 3: User Service Refactoring
 **Concept Focus:** Service Layer Orchestration, Polymorphic Input Handling, Schema Composition, Database Transactions.
 
 ### 📝 Pending Tasks
-- [ ] **Task 3.5:** Build `Tenant` API Router (`app/api/v1/tenants.py`).
+- [ ] **Task 3.6:** Review security implementation for Tenant endpoints (Ensure Tenants can only edit their own profile, Landlords can access Lodge tenants).
 
 ### ✅ Completed Tasks
 - [x] Review `sign_up_user` in `app/services/user_service.py`.
 - [x] **Task 3.1:** Refactor Pydantic Schemas to remove redundant fields in responses. 
-- [x] **Task 3.2:** Fix `TenantProfileCreate` schema. It incorrectly expects `UserResponse` instead of `UserCreate`.
+- [x] **Task 3.2:** Fix `TenantProfileCreate` schema.
 - [x] **Task 3.3:** Finalize `TenantProfileResponse` schema to remove all redundant data and security leaks.
 - [x] **Task 3.4:** Refactor `register_tenant` in `app/services/user_service.py` to fix transaction rollback bug and unpacking logic using `db.flush()`.
 - [x] **Task 3.4.1:** Delete redundant `create_tenant` from `app/crud/tenantprofile.py`.
+- [x] **Task 3.5:** Build `Tenant` API Router (`app/api/v1/tenants.py`).
+
+## Epic 4: Payment and Lease Infrastructure
+**Concept Focus:** Business logic, Date management, Complex object updates.
+
+### 📝 Pending Tasks
+- [ ] **Task 4.1:** Build `Lease` Service orchestrator. 
+- [ ] **Task 4.2:** Build `Payment` Service orchestrator.
 
 ---
 *Note: The PM (AI) will automatically append to this file upon task completion. Do not delete historical items.*
