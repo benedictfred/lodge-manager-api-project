@@ -4,6 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel, field_validator
 
 from app.schemas.room import RoomResponse
+from app.schemas.tenantprofile import TenantProfileResponse
 
 
 class LodgeBase(BaseModel):
@@ -26,6 +27,7 @@ class LodgeResponse(LodgeBase):
     created_at: datetime
     is_active: bool
     rooms: List[RoomResponse]
+    tenantprofiles: list[TenantProfileResponse]
 
     model_config = {'from_attributes': True}
 

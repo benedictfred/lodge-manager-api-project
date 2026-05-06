@@ -25,6 +25,7 @@ class TenantProfileResponse(TenantBase):
     user_id: int
     created_at: datetime
     is_active: bool
+    lodge_id: int
     user: UserResponse
 
     model_config = {'from_attributes': True}

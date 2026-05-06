@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.schemas import user as schema_user
 from app.schemas import tenantprofile as schema_tenant
-from app.core.security import  create_access_token
-from app.services.user_service import authenticate_user,  sign_up_landlord
+from app.core.security import create_access_token
+from app.services.user_service import authenticate_user, sign_up_landlord
 from app.services.tenant_services import sign_up_tenant
-from app.core.exceptions import UserAlreadyExistError
+from app.core.exceptions import UserAlreadyExistError, LodgeNotFoundError
 
 router = APIRouter()
 
@@ -18,12 +18,13 @@ def register_landlord(
         db: Session = Depends(get_db)
 ):
     try:
-        return  sign_up_landlord(db=db, landlord_data=landlord_in)
+        return sign_up_landlord(db=db, landlord_data=landlord_in)
     except UserAlreadyExistError as error:
         raise HTTPException(
             status_code=400,
             detail=str(error)
         )
+
 
 @router.post('/register/tenant/{lodge_id}', response_model=schema_tenant.TenantProfileResponse, status_code=201)
 def register_tenant(
@@ -31,9 +32,8 @@ def register_tenant(
         tenant_in: schema_tenant.TenantProfileCreate,
         db: Session = Depends(get_db)
 ):
-
     try:
-        return sign_up_tenant(db=db, tenant_in=tenant_in)
+        return sign_up_tenant(db=db, tenant_in=tenant_in, lodge_id=lodge_id)
 
     except UserAlreadyExistError as error:
         raise HTTPException(
@@ -41,7 +41,11 @@ def register_tenant(
             detail=str(error)
         )
 
-
+    except LodgeNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
 
 
 @router.post('/login', response_model=schema_user.Token)
@@ -55,17 +59,14 @@ def login_user(
     )
     authenticated_user = authenticate_user(db, email=form_data.username.lower(), password=form_data.password)
 
-
-    if not authenticated_user :
+    if not authenticated_user:
         raise unauthorized_exception
-
 
     access_token = create_access_token(
         subject=str(authenticated_user.id)
     )
 
-
-    return{
+    return {
         'access_token': access_token,
         'token_type': 'bearer'
     }

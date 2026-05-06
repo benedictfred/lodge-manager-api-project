@@ -6,8 +6,9 @@ from app.crud.tenantprofile import crud_tenant
 from app.core.enums import UserRole
 from app.core.exceptions import UserAlreadyExistError, LodgeNotFoundError
 from app.core.security import  get_password_hash
+from app.models.user import User
 from app.schemas.tenantprofile import TenantProfileCreate
-from app.schemas.user import UserInternal
+from app.schemas.user import UserInternal, UserCreate
 from app.services import lodge_service
 
 
@@ -34,3 +35,24 @@ def sign_up_tenant(
     )
 
     return crud_tenant.create_tenant(db, tenant_in=tenant_in, internal_user=base_user_data, lodge_id = lodge_id)
+
+
+
+def fetch_lodge_tenants(
+        db: Session,
+        lodge_id: int,
+        landlord_user: User ,
+        skip: int,
+        limit: int
+):
+    #check if lodge exist and is owned by landlord
+    #get lodges owned by the landlord
+
+    lodge = lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_user.id)
+    if not lodge:
+        raise LodgeNotFoundError()
+
+    tenants =  crud_tenant.get_tenants(db, lodge_id=lodge_id, skip=skip, max_limit=limit)
+    return tenants
+
+

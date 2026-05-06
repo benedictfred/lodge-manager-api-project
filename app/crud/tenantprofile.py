@@ -32,11 +32,9 @@ class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfi
             db.rollback()
             raise e
 
+    def get_tenants(self, db: Session, lodge_id: int, skip: int = 0, max_limit=50):
+        return db.query(self.model).filter(self.model.lodge_id == lodge_id).offset(skip).limit(max_limit).all()
 
-
-
-def get_tenants(db: Session, skip: int = 0, max_limit= 50):
-    return db.query(TenantProfile).offset(skip).limit(max_limit).all()
 
 
 def get_tenant(db: Session , tenant_id):

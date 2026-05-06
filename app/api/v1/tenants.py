@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import UserAlreadyExistError
+from app.core.exceptions import LodgeNotFoundError
+from app.services import tenant_services
 from app.schemas import  tenantprofile as schema_tenant
 from app.crud import tenantprofile as crud_tenant
 from typing import List
@@ -11,17 +12,28 @@ from app.models.user import User
 
 router = APIRouter()
 
-@router.get('/', response_model=List[schema_tenant.TenantProfileResponse])
-def get_all_tenants(
+@router.get('/{lodge_id}/tenants', response_model=List[schema_tenant.TenantProfileResponse])
+def get_lodge_tenants(
+        lodge_id: int,
         skip: int = 0,
         limit: int = 50,
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
-    #is the current user a landlord?
-    #must have lodge id
-    # does lodge exist and belong to the logged in landlord
-    return crud_tenant.get_tenants(db=db, skip=skip, max_limit=limit)
+
+    try:
+        return tenant_services.fetch_lodge_tenants(
+            db,
+            lodge_id=lodge_id,
+            landlord_user=landlord_user,
+            skip=skip,
+            limit=limit
+        )
+    except LodgeNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
 
 
 

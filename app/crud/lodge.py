@@ -24,7 +24,7 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
         ).first()
 
     #method to get lodges owned by a specific landlord
-    def get_multi_by_owner(self, db: Session, landlord_id: int, skip: int = 0, limit: int = 100):
+    def get_lodges_by_owner(self, db: Session, landlord_id: int, skip: int = 0, limit: int = 100):
         return db.query(self.model).filter(
             self.model.landlord_id == landlord_id
         ).offset(skip).limit(limit).all()
