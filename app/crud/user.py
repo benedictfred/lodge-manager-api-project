@@ -27,4 +27,3 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
 
 crud_user = CRUDUser(User)
-#fun facts you can add type hints to kwargs using Unpack[TypeDict], a feature in typing module

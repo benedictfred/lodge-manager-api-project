@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.tenantprofile import TenantProfileCreate, TenantProfileUpdate
 from app.schemas.user import UserInternal
 from app.services import lodge_service
+from app.services.lodge_service import is_landlord, is_tenant
 
 
 def sign_up_tenant(
@@ -61,3 +62,31 @@ def update_tenant_profile(
 
     tenant_user = base_user.tenantprofile
     return crud_tenant.update_tenant(db, update_data=update_data, tenant_user=tenant_user, base_user=base_user)
+
+
+def fetch_tenant(
+        db: Session,
+        tenant_id: int,
+        current_user: User
+):
+    # check the role of the user
+    #if landlord -> fetch the tenant by the id -> error
+    #check if the lodge the tenant belongs to has a landlord id that is same as the current landlord user -> error
+    #if true -> return the found tenant
+    # if tenant -> use the user_realtionship to get the tenant associated with the logged in user
+
+    if is_landlord(current_user.role):
+        tenant = crud_tenant.get(db, item_id=tenant_id)
+
+        if not tenant:
+            raise UserNotFoundError()
+
+        if tenant.lodge.landlord_id != current_user.id:
+            raise UserNotFoundError()
+
+        return tenant
+
+    tenant = current_user.tenantprofile
+    return tenant
+
+
