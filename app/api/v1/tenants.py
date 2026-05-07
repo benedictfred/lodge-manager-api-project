@@ -16,14 +16,13 @@ router = APIRouter()
 def update_tenant_profile(
         tenant_data: schema_tenant.TenantProfileUpdate,
         db: Session = Depends(get_db),
-        current_user: User =Depends(get_tenant_user)
+        current_user: User = Depends(get_tenant_user)
 ):
-
     try:
         return tenant_services.update_tenant_profile(
             db=db,
             update_data=tenant_data,
-            base_user = current_user,
+            base_user=current_user,
         )
     except UserNotFoundError as e:
         raise HTTPException(
@@ -34,16 +33,31 @@ def update_tenant_profile(
 
 @router.get('/profile', response_model=schema_tenant.TenantProfileResponse)
 def get_tenant_by_id(
-        tenant_id: int,
-        db: Session = Depends(get_db),
-       current_user=Depends(get_current_user)
+        current_user=Depends(get_tenant_user)
 ):
     #can be done by either landlord or tenant
     #if landlord -> does tenant exist and in the same lodge??
     #if tenant-> use the tenant_user obj instead (a user obj)
 
     try:
-        return tenant_services.fetch_tenant(db, tenant_id=tenant_id, current_user=current_user)
+        return tenant_services.fetch_tenant(current_user=current_user)
+
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
+
+
+@router.get('/profile/{tenant_id}', response_model=schema_tenant.TenantProfileResponse)
+def get_tenant_by_landlord(
+        tenant_id: int,
+        db: Session = Depends(get_db),
+        current_user=Depends(get_landlord_user)
+
+):
+    try:
+        return tenant_services.fetch_tenant_by_landlord(db, tenant_id=tenant_id, current_user=current_user)
 
     except UserNotFoundError as e:
         raise HTTPException(
@@ -70,4 +84,3 @@ def delete_tenant_by_id(
         )
 
     crud_tenant.delete_tenant(db=db, db_tenant=tenant)
-

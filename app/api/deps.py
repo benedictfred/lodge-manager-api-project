@@ -68,7 +68,7 @@ def get_landlord_user(
     if not is_landlord(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only landlords can manage lodges'
+            detail='Only landlords are allowed'
         )
     return current_user
 
@@ -78,6 +78,6 @@ def get_tenant_user(
     if not is_tenant(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only tenants can update their profile'
+            detail='Only tenants are allowed'
         )
     return current_user
