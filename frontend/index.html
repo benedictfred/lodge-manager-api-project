@@ -1,107 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LodgeManager - Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
-
-    <!-- Light Glassmorphism Card -->
-    <div class="bg-white/60 backdrop-blur-lg p-8 rounded-2xl shadow-xl w-full max-w-md border border-white/50">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-indigo-900 mb-2">LodgeManager</h1>
-            <p class="text-indigo-600">Sign in to your dashboard</p>
-        </div>
-
-        <form id="loginForm" class="space-y-6">
-            <div>
-                <label for="email" class="block text-sm font-medium text-indigo-900 mb-2">Email Address</label>
-                <input type="email" id="email" name="email" required
-                    class="w-full px-4 py-3 rounded-lg bg-white/50 border border-indigo-100 text-indigo-900 placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-colors"
-                    placeholder="admin@example.com">
-            </div>
-
-            <div>
-                <label for="password" class="block text-sm font-medium text-indigo-900 mb-2">Password</label>
-                <input type="password" id="password" name="password" required
-                    class="w-full px-4 py-3 rounded-lg bg-white/50 border border-indigo-100 text-indigo-900 placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-colors"
-                    placeholder="••••••••">
-            </div>
-
-            <!-- Error Message Box (Hidden by default) -->
-            <div id="errorBox" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <span class="block sm:inline" id="errorMessage">Invalid credentials.</span>
-            </div>
-
-            <button type="submit" id="loginBtn"
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                Login
-            </button>
-        </form>
-    </div>
-
-    <!-- Import our custom API Wrapper script! -->
-    <script src="js/api.js"></script>
-
-    <!-- The DOM Interaction Logic -->
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const emailInput = document.getElementById('email').value;
-            const passwordInput = document.getElementById('password').value;
-            const errorBox = document.getElementById('errorBox');
-            const errorMessage = document.getElementById('errorMessage');
-            const loginBtn = document.getElementById('loginBtn');
-
-            // UI Polish: Disable button and show "Loading..."
-            loginBtn.disabled = true;
-            loginBtn.innerText = 'Authenticating...';
-            errorBox.classList.add('hidden'); // Hide any previous errors
-
-            // FastAPI's OAuth2 login REQUIRES form data, NOT json!
-            const formData = new FormData();
-            formData.append('username', emailInput);
-            formData.append('password', passwordInput);
-
-            try {
-                // Use our new apiFetch wrapper to talk to the backend
-                // Notice we do NOT manually add the token here, apiFetch handles it!
-                // Wait, we don't use apiFetch here! Why? Because we don't HAVE a token yet!
-                // We must do a raw fetch to get the token initially.
-
-                const response = await fetch(`${BASE_URL}/auth/login`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    // Grab the 401 error message from FastAPI
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || "Login failed");
-                }
-
-                const data = await response.json();
-
-                // 1. The Wallet: Save the VIP token!
-                localStorage.setItem('access_token', data.access_token);
-
-                // 2. The Redirect: Kick them into the dashboard
-                window.location.href = 'dashboard.html';
-
-            } catch (error) {
-                // UI Polish: Show the error box if auth fails
-                errorBox.classList.remove('hidden');
-                errorMessage.innerText = error.message;
-
-                // Reset the button
-                loginBtn.disabled = false;
-                loginBtn.innerText = 'Login';
-                console.error("Auth Error:", error);
-            }
-        });
-    </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lodge Manager</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
