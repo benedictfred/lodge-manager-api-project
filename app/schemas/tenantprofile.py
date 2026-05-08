@@ -7,6 +7,7 @@ from app.core.enums import TenantType, StudentLevel
 
 
 class TenantBase(BaseModel):
+    lodge_id: int
     tenant_type: TenantType
     emergency_contact_name: str
     emergency_contact_phone_no: str
@@ -18,6 +19,7 @@ class TenantBase(BaseModel):
 class TenantProfileCreate(BaseModel):
     user_info: UserCreate
     tenant_info: TenantBase
+
 
 class TenantInfoUpdate(BaseModel):
     tenant_type: Optional[TenantType] = None
@@ -32,7 +34,6 @@ class TenantProfileResponse(TenantBase):
     user_id: int
     created_at: datetime
     is_active: bool
-    lodge_id: int
     user: UserResponse
 
     model_config = {'from_attributes': True}
@@ -41,4 +42,5 @@ class TenantProfileResponse(TenantBase):
 class TenantProfileUpdate(BaseModel):
     user_info: Optional[UserUpdate] = None
     tenant_info: Optional[TenantInfoUpdate] = None
+
 

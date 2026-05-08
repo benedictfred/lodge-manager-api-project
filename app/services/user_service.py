@@ -1,11 +1,9 @@
 from sqlalchemy.orm import Session
 
 from app.crud.user import crud_user
-from app.crud.tenantprofile import crud_tenant
 from app.core.enums import UserRole
 from app.core.exceptions import UserAlreadyExistError
 from app.core.security import verify_password_hash, get_password_hash
-from app.schemas.tenantprofile import TenantProfileCreate
 from app.schemas.user import UserCreate, UserInternal
 
 

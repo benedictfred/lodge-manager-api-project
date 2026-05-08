@@ -7,9 +7,12 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, mapped_column, Mapped
 from typing import TYPE_CHECKING
 
+
+
 if TYPE_CHECKING:
     from app.models.tenantprofile import TenantProfile
     from app.models.room import Room
+    from app.models.payment import Payment
 
 
 class Lease(Base):
@@ -25,5 +28,5 @@ class Lease(Base):
     tenant: Mapped["TenantProfile"] = relationship('TenantProfile', back_populates='leases')
     room: Mapped["Room"] = relationship('Room', back_populates='leases')
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    # payments = relationship('Payment', back_populates='lease')
+    payments: Mapped["Payment"] = relationship('Payment', back_populates='lease')
 

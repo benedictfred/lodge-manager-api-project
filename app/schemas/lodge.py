@@ -1,4 +1,4 @@
-from datetime import  datetime
+from datetime import datetime
 from typing import Optional, List
 
 from pydantic import BaseModel, field_validator
@@ -17,17 +17,15 @@ class LodgeBase(BaseModel):
         return value.strip().lower()
 
 
-
 class LodgeCreate(LodgeBase):
     pass
+
 
 class LodgeResponse(LodgeBase):
     id: int
     landlord_id: int
     created_at: datetime
     is_active: bool
-    rooms: List[RoomResponse]
-    tenantprofiles: list[TenantProfileResponse]
 
     model_config = {'from_attributes': True}
 

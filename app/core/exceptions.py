@@ -24,3 +24,6 @@ class RoomAlreadyExistError(Exception):
     def __init__(self, room_name: str):
         super().__init__(f'Room with that name: {room_name} already exists')
 
+class ActiveLeaseFoundError(Exception):
+    def __init__(self):
+        super().__init__('Lease already exists')

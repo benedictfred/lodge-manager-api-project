@@ -26,14 +26,13 @@ def register_landlord(
         )
 
 
-@router.post('/register/tenant/{lodge_id}', response_model=schema_tenant.TenantProfileResponse, status_code=201)
+@router.post('/register/tenant', response_model=schema_tenant.TenantProfileResponse, status_code=201)
 def register_tenant(
-        lodge_id: int,
         tenant_in: schema_tenant.TenantProfileCreate,
         db: Session = Depends(get_db)
 ):
     try:
-        return sign_up_tenant(db=db, tenant_in=tenant_in, lodge_id=lodge_id)
+        return sign_up_tenant(db=db, tenant_in=tenant_in)
 
     except UserAlreadyExistError as error:
         raise HTTPException(

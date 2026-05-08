@@ -1,20 +1,19 @@
-from app.models.lodge import Lodge
 from app.schemas import room as schema_room
 from app.crud.room import crud_room
 from sqlalchemy.orm import Session
 from app.services import lodge_service
-from app.core.exceptions import RoomAlreadyExistError, LodgeNotFoundError, RoomNotFoundError
+from app.core.exceptions import RoomAlreadyExistError, RoomNotFoundError
 
 
-def create_room_for_lodge(db: Session, room_in: schema_room.RoomCreate, lodge_id: int, landlord_id: int):
-    lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=landlord_id)
+def create_room_for_lodge(db: Session, room_in: schema_room.RoomCreate, landlord_id: int):
+    lodge = lodge_service.verify_lodge_ownership(db=db, lodge_id=room_in.lodge_id, landlord_id=landlord_id)
 
-    room = crud_room.get_room_by_lodge_and_number(db=db, room_no=room_in.room_no, lodge_id=lodge_id)
+    room = crud_room.get_room_by_lodge_and_number(db=db, room_no=room_in.room_no, lodge_id=lodge.id)
 
     if room:
         raise RoomAlreadyExistError(room_in.room_no)
 
-    return crud_room.create(db=db, obj_in=room_in, lodge_id=lodge_id)
+    return crud_room.create(db=db, obj_in=room_in)
 
 
 def get_lodge_rooms(db: Session, lodge_id: int, landlord_id, skip: int, limit: int):

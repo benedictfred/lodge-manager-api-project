@@ -7,7 +7,7 @@ from app.api.deps import get_db, get_current_user, get_landlord_user
 from app.models.user import User
 from app.services import room_service
 from app.core.exceptions import LodgeNotFoundError, RoomAlreadyExistError, RoomNotFoundError
-
+from app.schemas import lease as schema_lease
 router = APIRouter()
 
 @router.get('/{lodge_id}/rooms', response_model=List[schema_room.RoomResponse])
@@ -33,9 +33,8 @@ def get_all_rooms(
         )
 
 
-@router.post('/{lodge_id}', response_model=schema_room.RoomResponse)
+@router.post('/', response_model=schema_room.RoomResponse)
 def create_room(
-        lodge_id: int,
         room_in: schema_room.RoomCreate,
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
@@ -43,7 +42,6 @@ def create_room(
     try:
         return room_service.create_room_for_lodge(
             db=db, room_in=room_in,
-            lodge_id=lodge_id,
             landlord_id=landlord_user.id
         )
 
@@ -58,6 +56,7 @@ def create_room(
             status_code=404,
             detail=str(error)
         )
+
 
 
 @router.get('/{lodge_id}/rooms/{room_id}', response_model=schema_room.RoomResponse)

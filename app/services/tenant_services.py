@@ -15,11 +15,10 @@ from app.services.lodge_service import is_landlord, is_tenant
 
 
 def sign_up_tenant(
-        lodge_id: int,
         db: Session,
         tenant_in: TenantProfileCreate,
 ):
-    if not crud_lodge.get(db, item_id=lodge_id):
+    if not crud_lodge.get(db, item_id=tenant_in.tenant_info.lodge_id):
         raise LodgeNotFoundError()
 
     if crud_user.get_user_by_email(db, email=tenant_in.user_info.email):
@@ -36,7 +35,7 @@ def sign_up_tenant(
         role=UserRole.TENANT
     )
 
-    return crud_tenant.create_tenant(db, tenant_in=tenant_in, internal_user=base_user_data, lodge_id=lodge_id)
+    return crud_tenant.create_tenant(db, tenant_in=tenant_in, internal_user=base_user_data)
 
 
 def fetch_lodge_tenants(

@@ -21,13 +21,13 @@ if config.config_file_name is not None:
 # from app.models.user import  LandLord
 
 
-# from app.models.lease import Lease
-# from app.models.payment import  Payment
+from app.models.lease import Lease
+from app.models.payment import  Payment
 from app.models.user import User
 from app.models.lodge import Lodge
 from app.models.room import  Room
 from app.models.tenantprofile import TenantProfile
-from app.core.enums import UserRole, RoomStatus, StudentLevel, TenantType
+from app.core.enums import UserRole, RoomStatus, StudentLevel, TenantType,LeaseStatus
 from app.core.config import settings
 from app.db.session import Base
 target_metadata = Base.metadata

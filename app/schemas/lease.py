@@ -16,12 +16,11 @@ class LeaseBase(BaseModel):
 
 
 class LeaseCreate(LeaseBase):
-    pass
+    total_amt_paid: int = Field(..., ge=0)
 
 
 class LeaseResponse(LeaseBase):
     id: int
-    initial_amt_paid: int
     created_at: datetime
 
     model_config = {"from_attributes": True}

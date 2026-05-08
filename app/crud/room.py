@@ -1,4 +1,4 @@
-from typing import Union
+
 from app.models.room import  Room
 from app.schemas.room import RoomCreate, RoomUpdate
 from sqlalchemy.orm import Session

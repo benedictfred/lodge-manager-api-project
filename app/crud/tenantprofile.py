@@ -12,7 +12,7 @@ from app.schemas.user import UserCreate, UserInternal
 
 
 class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfileUpdate]):
-    def create_tenant(self, db: Session, tenant_in: TenantProfileCreate, internal_user: UserInternal, lodge_id: int):
+    def create_tenant(self, db: Session, tenant_in: TenantProfileCreate, internal_user: UserInternal):
         try:
             db_user = User(**internal_user.model_dump())
             db.add(db_user)
@@ -20,7 +20,6 @@ class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfi
 
             tenant_profile = tenant_in.model_dump(exclude={'user_info'})
             tenant_profile['tenant_info']['user_id'] = db_user.id
-            tenant_profile['tenant_info']['lodge_id'] = lodge_id
 
             db_tenant = TenantProfile(**tenant_profile.get('tenant_info'))
             db.add(db_tenant)
