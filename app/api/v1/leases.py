@@ -1,8 +1,7 @@
 from app.core.enums import LeaseStatus
-from app.crud import lease as crud_lease
 from app.schemas import lease as schema_lease
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_landlord_user, get_tenant_user
 from app.models.user import User
@@ -112,10 +111,19 @@ def terminate_lease_by_id(
     return lease_services.terminate_lease(db, lease_id=lease_id, landlord_id=current_user.id)
 
 
-@router.patch('/me/terminate', response_model=schema_lease.LeaseResponse)
+@router.patch('/me/terminate/{lease_id}', response_model=schema_lease.LeaseResponse)
 def request_lease_termination(
-        db: Session,
+        lease_id: int,
+        db: Session = Depends(get_db),
         current_tenant: User = Depends(get_tenant_user)
 ):
-    #leases
+    #tenant can have multiple active leases
+    #tenant must be able to request termination of only his selected active lease
+    return lease_services.appeal_for_lease_termination(
+        db,
+        lease_id=lease_id,
+        tenant_id = current_tenant.id
+    )
+
+
 

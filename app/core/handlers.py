@@ -2,8 +2,7 @@ from .exceptions import (
     BaseAlreadyExistError,
     BaseNotFoundError,
     UnauthorizedAccessError,
-    LeaseAlreadyTerminated,
-    LeaseAlreadyExpired,
+    InvalidLeaseActionError
 
 )
 from fastapi.responses import JSONResponse
@@ -39,29 +38,21 @@ async def unauthorized_access_exception_handler(request: Request, exc: Unauthori
         }
     )
 
-async def already_terminated_lease_handler(request: Request, exc: LeaseAlreadyTerminated):
+async def invalid_lease_action_handler(request: Request, exc: InvalidLeaseActionError):
     return JSONResponse(
         status_code=400,
         content={
-            'error': 'Already terminated',
+            'error': 'Invalid Lease Action',
             'detail': exc.detail
         }
     )
 
-async def already_expired_lease_handler(request: Request, exc: LeaseAlreadyExpired):
-    return JSONResponse(
-        status_code=400,
-        content={
-            'error': 'Already Expired',
-            'detail': exc.detail
-        }
-    )
+
 
 lodge_ops_handlers = {
     BaseNotFoundError: not_found_exception_handler,
     BaseAlreadyExistError: already_exist_exception_handler,
     UnauthorizedAccessError: unauthorized_access_exception_handler,
-    LeaseAlreadyTerminated: already_terminated_lease_handler,
-    LeaseAlreadyExpired: already_expired_lease_handler
+    InvalidLeaseActionError: invalid_lease_action_handler,
 
 }

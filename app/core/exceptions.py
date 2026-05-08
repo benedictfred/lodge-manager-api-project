@@ -1,11 +1,13 @@
 from typing import Optional
 
+from app.core.enums import LeaseStatus
+
+
 class BaseAlreadyExistError(Exception):
     def __init__(self, entity_name: Optional[str], exception_name: str):
         self.entity_name = entity_name
         self.exception_name = exception_name
-        self.detail = f'{self.exception_name.title()} already exists' if not self.entity_name else \
-            f'{self.exception_name.title()}: {self.entity_name} already exists'
+        self.detail = f'{self.exception_name.title()}: {self.entity_name} already exists'
         super().__init__(self.detail)
 
 
@@ -22,23 +24,13 @@ class RoomAlreadyExistError(BaseAlreadyExistError):
     def __init__(self, room_name: str):
         super().__init__(entity_name=room_name, exception_name='Room')
 
-class ActiveLeaseFoundError(BaseAlreadyExistError):
-    def __init__(self):
-        super().__init__(exception_name='Active Lease')
 
 
 
 
-class LeaseAlreadyTerminated(Exception):
-    def __init__(self):
-        self.detail = f'Lease has already been Terminated'
-
-class LeaseAlreadyExpired(Exception):
-    def __init__(self):
-        self.detail = f'Lease has already Expired'
-
-
-
+class InvalidLeaseActionError(Exception):
+    def __init__(self, status: str ):
+        self.detail = f'Lease is already {status}'
 
 
 

@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from app.schemas.lease import LeaseCreate
 from app.services import lodge_service
 from app.crud.lease import crud_lease
-from app.core.exceptions import RoomNotFoundError, UserNotFoundError, ActiveLeaseFoundError, \
-    LodgeNotFoundError, LeaseNotFoundError, LeaseAlreadyExpired, LeaseAlreadyTerminated
+from app.core.exceptions import (RoomNotFoundError, UserNotFoundError,
+                                 LodgeNotFoundError, LeaseNotFoundError,  InvalidLeaseActionError)
 
 
 def create_new_lease(
@@ -85,6 +85,20 @@ def filter_leases(
         skip=skip
     )
 
+def verify_lease_to_terminate(
+        db: Session,
+        lease_id: int,
+):
+    lease = crud_lease.get(db, item_id=lease_id)
+
+    if not lease:
+        raise LeaseNotFoundError()
+
+    # lease cannot be terminated if it has already been terminated or is expired
+    if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.EXPIRED]:
+        raise InvalidLeaseActionError(status=str(lease.status))
+
+    return lease
 
 def terminate_lease(
         db: Session,
@@ -96,25 +110,29 @@ def terminate_lease(
     #check if the landlord owns the lodge the current found room is in
     #if all checks are done and the landlord does own the lodge , terminate the lease
 
-    lease = crud_lease.get(db, item_id=lease_id)
-
-    if not lease:
-        raise LeaseNotFoundError()
-
-    #lease cannot be terminated if it has already been terminated or is expired
-    is_terminated_lease = lease.status == LeaseStatus.TERMINATED
-
-    if  is_terminated_lease:
-        raise LeaseAlreadyTerminated()
-
-    is_expired_lease =  lease.status == LeaseStatus.EXPIRED
-
-    if is_expired_lease:
-        raise LeaseAlreadyExpired()
+    lease = verify_lease_to_terminate(db, lease_id=lease_id)
 
     room = lease.room
 
     if room.lodge.landlord_id != landlord_id:
         raise RoomNotFoundError()
 
-    return crud_lease.terminate_lease(db, db_lease=lease)
+    return crud_lease.lease_terminate(db, db_lease=lease)
+
+
+def appeal_for_lease_termination(
+        db:Session,
+        lease_id: int,
+        tenant_id: int
+):
+    #find lease with that id,
+    #verify that the lease is terminatable
+    #verify lease's tenant_id matches that of the current tenant
+    #appeal for lease termination
+
+    lease = verify_lease_to_terminate(db, lease_id=lease_id)
+
+    if lease.tenant_id != tenant_id:
+        raise LeaseNotFoundError()
+
+    return crud_lease.request_terminate_lease(db, db_lease=lease)

@@ -84,7 +84,7 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
             Lease.status == LeaseStatus.ACTIVE
         ).first()
 
-    def terminate_lease(self, db: Session, db_lease: Lease):
+    def lease_terminate(self, db: Session, db_lease: Lease) -> Lease:
         db_lease.status = LeaseStatus.TERMINATED
         db_lease.room.status = RoomStatus.VACANT
         db_lease.end_date = datetime.now()
@@ -94,13 +94,19 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         return db_lease
 
 
-    def update_lease(self, db: Session, lease_data: LeaseUpdate, db_lease: Lease):
+    def update_lease(self, db: Session, lease_data: LeaseUpdate, db_lease: Lease) -> Lease:
         update_data = lease_data.model_dump(exclude_unset=True)
 
         for k, v in update_data.items():
             setattr(db_lease, k, v)
 
         db.add(db_lease)
+        db.commit()
+        db.refresh(db_lease)
+        return db_lease
+
+    def  terminate_lease_request(self, db: Session, db_lease: Lease) -> Lease:
+        db_lease.status = LeaseStatus.PENDING_TERMINATION
         db.commit()
         db.refresh(db_lease)
         return db_lease
