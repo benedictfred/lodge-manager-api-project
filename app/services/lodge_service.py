@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.core.enums import UserRole
+from app.models.room import Room
 from app.schemas.lodge import LodgeCreate, LodgeUpdate
 from app.core.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
 from app.crud.lodge import crud_lodge
@@ -37,3 +38,6 @@ def update_landlord_lodge(db:Session, lodge_id: int, landlord_id: int, update_da
 
     return crud_lodge.update(db=db, update_data=update_data, db_obj=lodge)
 
+
+def landlord_owns_room_lodge(room: Room, landlord_id: int):
+    return room.lodge.landlord_id == landlord_id

@@ -1,0 +1,58 @@
+from app.core.enums import LeaseStatus
+from app.core.exceptions import LeaseNotFoundError, RoomNotFoundError, InvalidLeaseActionError, \
+    BaseMaxLimitReachedError, RentAmtExceededError
+from app.crud.payment import  crud_payment
+from app.crud.lease import crud_lease
+from app.schemas import payment as schema_payment
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.api.deps import get_db, get_current_user, get_landlord_user
+from app.models.user import User
+from app.schemas.payment import PaymentCreate
+from app.services import lodge_service
+
+
+def can_add_payment(total_payments: int, incoming_amt: int,  agreed_amt: int) -> bool:
+    return total_payments + incoming_amt <= agreed_amt
+
+def add_payment_record(
+        db: Session,
+        current_landlord: User,
+        payment_data: PaymentCreate
+):
+    #use the lease id in the payment data to find the lease
+    #verify that the landlord owns the lodge the lease is in
+    #if lease exist create a payment record with that lease id...
+    #you can't add payment record to a lease whose agreed_rent_amt is equal to the aggregate of the payments made for that lease
+    #can't add payment for leases that are not active
+
+    lease = crud_lease.get(db, item_id=payment_data.lease_id)
+
+    if not lease:
+        raise LeaseNotFoundError()
+
+    room = lease.room
+
+    if not lodge_service.landlord_owns_room_lodge(room=room, landlord_id=current_landlord.id):
+        raise RoomNotFoundError()
+
+    if lease.status != LeaseStatus.ACTIVE:
+        raise InvalidLeaseActionError(status=lease.status)
+
+
+    total_payments = crud_payment.get_payments_aggregate_by_lease_id(db, lease_id=lease.id) or 0
+
+    if not can_add_payment(total_payments=total_payments,incoming_amt=payment_data.amount_paid,agreed_amt=lease.agreed_rent_amt):
+        print(f'total_payment: {total_payments} ')
+        raise RentAmtExceededError(
+            attempted=payment_data.amount_paid,
+            current_total=total_payments,
+            agreed=lease.agreed_rent_amt
+        )
+
+    return crud_payment.create(db, obj_in=payment_data)
+
+
+
+

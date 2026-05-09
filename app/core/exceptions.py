@@ -33,6 +33,15 @@ class InvalidLeaseActionError(Exception):
         self.detail = f'Lease is already {status.value}'
 
 
+class BaseMaxLimitReachedError(Exception):
+    def __init__(self):
+        pass
+
+class RentAmtExceededError(BaseMaxLimitReachedError):
+    def __init__(self, agreed, current_total, attempted):
+        self.remaining = agreed - current_total
+        self.detail = f"Remaining balance is ₦{self.remaining:,}. You attempted to pay ₦{attempted:,}."
+
 
 class BaseNotFoundError(Exception):
     def __init__(self, name:str):

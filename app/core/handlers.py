@@ -2,7 +2,8 @@ from .exceptions import (
     BaseAlreadyExistError,
     BaseNotFoundError,
     UnauthorizedAccessError,
-    InvalidLeaseActionError
+    InvalidLeaseActionError,
+    BaseMaxLimitReachedError
 
 )
 from fastapi.responses import JSONResponse
@@ -47,12 +48,20 @@ async def invalid_lease_action_handler(request: Request, exc: InvalidLeaseAction
         }
     )
 
-
+async def max_limit_reached_handler(request: Request, exc: BaseMaxLimitReachedError):
+    return JSONResponse(
+        status_code=400,
+        content={
+            'error': 'Limit Reached',
+            'detail': exc.detail
+        }
+    )
 
 lodge_ops_handlers = {
     BaseNotFoundError: not_found_exception_handler,
     BaseAlreadyExistError: already_exist_exception_handler,
     UnauthorizedAccessError: unauthorized_access_exception_handler,
     InvalidLeaseActionError: invalid_lease_action_handler,
+    BaseMaxLimitReachedError: max_limit_reached_handler
 
 }
