@@ -36,7 +36,7 @@ def create_new_lease(
     )
 
     if active_lease:
-        raise ActiveLeaseFoundError()
+        raise InvalidLeaseActionError(status=active_lease.status)
 
     return crud_lease.create_lease(db, lease_data=lease_data, room=room)
 
@@ -90,13 +90,13 @@ def verify_lease_to_terminate(
         lease_id: int,
 ):
     lease = crud_lease.get(db, item_id=lease_id)
-
     if not lease:
+        print('here')
         raise LeaseNotFoundError()
 
     # lease cannot be terminated if it has already been terminated or is expired
     if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.EXPIRED]:
-        raise InvalidLeaseActionError(status=str(lease.status))
+        raise InvalidLeaseActionError(status=lease.status)
 
     return lease
 
@@ -135,4 +135,7 @@ def appeal_for_lease_termination(
     if lease.tenant_id != tenant_id:
         raise LeaseNotFoundError()
 
+    if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.PENDING_TERMINATION, LeaseStatus.EXPIRED]:
+        raise InvalidLeaseActionError(status=lease.status)
+    
     return crud_lease.request_terminate_lease(db, db_lease=lease)

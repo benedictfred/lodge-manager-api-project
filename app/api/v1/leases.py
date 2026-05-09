@@ -122,7 +122,7 @@ def request_lease_termination(
     return lease_services.appeal_for_lease_termination(
         db,
         lease_id=lease_id,
-        tenant_id = current_tenant.id
+        tenant_id = current_tenant.tenantprofile.id
     )
 
 

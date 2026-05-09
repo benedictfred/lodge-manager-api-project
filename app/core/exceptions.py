@@ -29,8 +29,8 @@ class RoomAlreadyExistError(BaseAlreadyExistError):
 
 
 class InvalidLeaseActionError(Exception):
-    def __init__(self, status: str ):
-        self.detail = f'Lease is already {status}'
+    def __init__(self, status: LeaseStatus ):
+        self.detail = f'Lease is already {status.value}'
 
 
 
