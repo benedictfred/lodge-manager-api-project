@@ -3,8 +3,9 @@ from app.core.exceptions import LeaseNotFoundError, RoomNotFoundError, InvalidLe
     BaseMaxLimitReachedError, RentAmtExceededError
 from app.crud.payment import  crud_payment
 from app.crud.lease import crud_lease
+from app.models.lease import Lease
 from app.schemas import payment as schema_payment
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user, get_landlord_user
@@ -55,4 +56,46 @@ def add_payment_record(
 
 
 
+def fetch_payments_by_lease(
+        db: Session,
+        lease_id: int,
+        landlord_id: int,
+        skip: Optional[int],
+        limit: Optional[int]
+):
+    lease = crud_lease.get(db, item_id=lease_id)
 
+    if not lease:
+        raise LeaseNotFoundError()
+
+    room = lease.room
+
+    if not lodge_service.landlord_owns_room_lodge(room=room, landlord_id=landlord_id):
+        raise RoomNotFoundError()
+
+    return crud_payment.get_lease_payments(db, lease_id=lease_id, skip=skip, limit=limit)
+
+
+
+def fetch_tenant_lease_payments(
+        db: Session,
+        lease_id: int,
+        tenant_id: int,
+        skip: Optional[int],
+        limit: Optional[int]
+):
+    lease = crud_lease.get(db, item_id=lease_id)
+
+    if not lease:
+        raise LeaseNotFoundError()
+
+    if not verify_tenant_owns_lease(lease=lease, tenant_id=tenant_id):
+        raise LeaseNotFoundError()
+
+    return crud_payment.get_lease_payments(db, lease_id=lease_id, skip=skip, limit=limit)
+
+
+
+
+def verify_tenant_owns_lease(lease: Lease, tenant_id: int):
+    return lease.tenant_id == tenant_id

@@ -58,6 +58,7 @@ def filter_leases_for_landlord(
 
     return filter_leases(
         db,
+        lodge_id = lodge_id,
         tenant_id=tenant_id,
         room_id=room_id,
         skip=skip,
@@ -91,7 +92,6 @@ def verify_lease_to_terminate(
 ):
     lease = crud_lease.get(db, item_id=lease_id)
     if not lease:
-        print('here')
         raise LeaseNotFoundError()
 
     # lease cannot be terminated if it has already been terminated or is expired
@@ -137,5 +137,5 @@ def appeal_for_lease_termination(
 
     if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.PENDING_TERMINATION, LeaseStatus.EXPIRED]:
         raise InvalidLeaseActionError(status=lease.status)
-    
+
     return crud_lease.request_terminate_lease(db, db_lease=lease)
