@@ -2,18 +2,21 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    LANDLORD = "landlord"
-    TENANT = "tenant"
-    ADMIN = "admin"
+    LANDLORD = "Landlord"
+    TENANT = "Tenant"
+    ADMIN = "Admin"
+
 
 class RoomStatus(str, Enum):
     VACANT = 'Vacant'
     OCCUPIED = 'Occupied'
     MAINTENANCE = 'Maintenance'
 
+
 class TenantType(str, Enum):
-    STUDENT = 'student'
-    OTHERS = 'others'
+    STUDENT = 'Student'
+    OTHERS = 'Others'
+
 
 class StudentLevel(str, Enum):
     LEVEL_100 = '100'
@@ -23,8 +26,23 @@ class StudentLevel(str, Enum):
     LEVEL_500 = '500'
     LEVEL_600 = '600'
 
+
 class LeaseStatus(str, Enum):
     ACTIVE = 'Active'
     EXPIRED = 'Expired'
     TERMINATED = 'Terminated'
     PENDING_TERMINATION = 'Pending_Termination'
+
+
+class BadgeTexts(str, Enum):
+    SAFE = 'Safe'
+    EXPIRING = 'Expiring'
+    OVERDUE = 'Overdue'
+    VACANT = 'Vacant'
+    MAINTENANCE = 'Maintenance'
+
+class BadgeVariants(str, Enum):
+    SUCCESS = 'Success'
+    WARNING = 'Warning'
+    DANGER = 'Danger'
+    INACTIVE = 'Inactive'

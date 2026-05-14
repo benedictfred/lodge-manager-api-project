@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import date, datetime
 
 from app.core.enums import LeaseStatus
+from app.schemas.room import RoomGridSummary
 
 
 class LeaseBase(BaseModel):
@@ -32,4 +33,9 @@ class LeaseUpdate(BaseModel):
     status: Optional[LeaseStatus] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+
+class OccupiedRoomLeasesResponse(BaseModel):
+    safe: list[RoomGridSummary]
+    expiring: list[RoomGridSummary]
+    overdue: list[RoomGridSummary]
 

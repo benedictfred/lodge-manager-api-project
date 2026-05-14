@@ -9,7 +9,7 @@ from app.api.v1.leases import router as lease_router
 from app.api.v1.payments import router as payment_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.handlers import lodge_ops_handlers
-
+from app.api.v1.dashboards.landlord_dashboard import router as landlord_dashboard_router
 app = FastAPI(title=settings.PROJECT_NAME, exception_handlers=lodge_ops_handlers)
 
 
@@ -34,6 +34,8 @@ app.include_router(lease_router, prefix='/api/v1/leases', tags=['Leases'])
 
 app.include_router(payment_router, prefix='/api/v1/payments', tags=['Payments'])
 
+
+app.include_router(landlord_dashboard_router, prefix='/api/v1/dashboard', tags=['Dashboards'])
 @app.get("/")
 def health_status():
     return {"message": f"Your {settings.PROJECT_NAME} is working well"}
