@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional
+from typing import Optional, Union
 
 from app.core.enums import BadgeTexts, BadgeVariants
 from app.models.room import RoomStatus
@@ -48,7 +48,7 @@ class RoomUpdate(BaseModel):
 class RoomGridSummary(BaseModel):
     lease_id: Optional[int] = None
     room_no: str
-    badge_text: BadgeTexts
+    badge_text: Union[BadgeTexts, RoomStatus]
     badge_variant: BadgeVariants
     main_display_text: str
     sub_display_text: str

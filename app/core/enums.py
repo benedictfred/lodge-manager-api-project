@@ -38,11 +38,12 @@ class BadgeTexts(str, Enum):
     SAFE = 'Safe'
     EXPIRING = 'Expiring'
     OVERDUE = 'Overdue'
-    VACANT = 'Vacant'
-    MAINTENANCE = 'Maintenance'
+    OWING = 'Owing'
 
 class BadgeVariants(str, Enum):
     SUCCESS = 'Success'
     WARNING = 'Warning'
     DANGER = 'Danger'
     INACTIVE = 'Inactive'
+    NEED_REPAIR = 'Need_Repair',
+    INFO = 'Info'
