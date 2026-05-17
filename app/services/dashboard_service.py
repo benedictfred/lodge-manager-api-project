@@ -2,7 +2,9 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 from app.core.enums import UserRole, BadgeTexts
+from app.crud.payment import crud_payment
 from app.models.room import Room
+from app.schemas.financial import FinancialResponse
 from app.schemas.lease import OccupiedRoomLeasesResponse
 from app.schemas.lodge import LodgeCreate, LodgeUpdate
 from app.core.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
@@ -26,15 +28,16 @@ def get_landlord_dashboard(
     #TODO: SUM ALL financial for the landlords revenue(expected, collected & outstanding)
     lodge = lodge_service.verify_lodge_ownership(lodge_id=lodge_id, landlord_id=landlord_id)
 
-    financials = crud_room.get_financials_related_to_active_lease(lodge_id=lodge.id)
-    #potential_income : sum of all the base_rent price in all the rooms in the lodge
-    #go to the room table and sum all the base_rent price column in the table
-    #expected_income: sum of all the agreed_rent price in the current active leases
-    #go to the lease table and sum all the agreed_rent price column of leases that are active
-    #collected_income: sum of all the payments from the active leases
-    #go to the lease, sum all their active leases payments
-    #unpaid_rent: difference between the sum of expected agreed rent of all time - sum of payments of all time( timeless)
+    potential_revenue = crud_payment.get_potential_income_from_rooms(db, lodge_id=lodge_id) or 0
+    active_lease_financials = crud_payment.get_financials_for_active_leases(db, lodge_id=lodge_id)
+    unpaid_rent = crud_payment.get_total_unpaid_rent(db, lodge_id=lodge_id) or 0
 
+    financials = FinancialResponse(
+        potential_revenue= potential_revenue,
+        expected_revenue= dict(active_lease_financials).get('expected_revenue') or 0,
+        collected_revenue= dict(active_lease_financials).get('collected_revenue') or 0,
+        unpaid_rent= unpaid_rent
+    )
     # Todo: count all the entities tied to the landlord's lodge( rooms, tenant, room statuses)
 
     #Todo: group rooms into occupied(safe, expiring & overdue) , vacant & maintenance

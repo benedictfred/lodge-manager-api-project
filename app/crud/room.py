@@ -1,5 +1,6 @@
 from typing import Union
 from app.core.enums import RoomStatus, BadgeTexts, BadgeVariants
+from app.crud.payment import crud_payment
 from app.models.lease import Lease
 from app.models.payment import Payment
 from app.models.room import Room
@@ -27,9 +28,6 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
         """Retrieve a list of rooms with pagination support."""
         return db.query(self.model).filter(self.model.lodge_id == lodge_id).offset(skip).limit(max_limit).all()
 
-    def get_financials_related_to_active_lease(self, lodge_id: int):
-        pass
-
     def get_dashboard_rooms(
             self,
             filter_by:
@@ -37,21 +35,22 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             db: Session,
             lodge_id: int,
             skip: int = 0,
-            limit:int = 50
+            limit: int = 50
     ) -> list[RoomGridSummary]:
 
+        payment_subq = crud_payment.get_payment_subq()
+
         days_left = Lease.end_date - func.current_date()
-        has_payed = func.sum(Payment.amount_paid) == Lease.agreed_rent_amt
-        not_payed = func.sum(Payment.amount_paid) < Lease.agreed_rent_amt
+        has_payed = func.sum(payment_subq.c.total_paid) == Lease.agreed_rent_amt
+        not_payed = func.sum(payment_subq.c.total_paid) < Lease.agreed_rent_amt
 
         stmt = (select(
             Lease.id.label('lease_id'),
             Room.room_no.label('room_no'),
-            func.sum(Payment.amount_paid),
             case(
                 (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 90, has_payed), BadgeTexts.SAFE),
                 (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 0, has_payed), BadgeTexts.EXPIRING),
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left < 0 , has_payed), BadgeTexts.OVERDUE),
+                (and_(Room.status == RoomStatus.OCCUPIED, days_left < 0, has_payed), BadgeTexts.OVERDUE),
                 (Room.status == RoomStatus.VACANT, RoomStatus.VACANT),
                 (Room.status == RoomStatus.MAINTENANCE, RoomStatus.MAINTENANCE),
                 else_=BadgeTexts.OWING
@@ -60,10 +59,10 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             case(
                 (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 90, has_payed), BadgeVariants.SUCCESS),
                 (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 0, has_payed), BadgeVariants.WARNING),
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left < 0 , has_payed),BadgeVariants.DANGER),
+                (and_(Room.status == RoomStatus.OCCUPIED, days_left < 0, has_payed), BadgeVariants.DANGER),
                 (Room.status == RoomStatus.VACANT, BadgeVariants.INACTIVE),
                 (Room.status == RoomStatus.MAINTENANCE, BadgeVariants.NEED_REPAIR),
-                else_= BadgeVariants.INFO
+                else_=BadgeVariants.INFO
             ).label('badge_variants'),
 
             case(
@@ -89,7 +88,7 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
         ).outerjoin(
             User, TenantProfile.user_id == User.id
         ).outerjoin(
-            Payment, Payment.lease_id == Lease.id
+            payment_subq, Payment.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id
         ).group_by(
@@ -101,14 +100,14 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             User.name
         ))
 
-        if  filter_by == RoomStatus.OCCUPIED:
+        if filter_by == RoomStatus.OCCUPIED:
             stmt = stmt.where((Room.status == RoomStatus.OCCUPIED))
 
         elif filter_by == BadgeTexts.SAFE:
             stmt = stmt.where((Room.status == RoomStatus.OCCUPIED)).having(has_payed, days_left >= 90)
 
         elif filter_by == BadgeTexts.EXPIRING:
-            stmt = stmt.where((Room.status == RoomStatus.OCCUPIED )).having(has_payed, days_left >= 0)
+            stmt = stmt.where((Room.status == RoomStatus.OCCUPIED)).having(has_payed, days_left >= 0)
 
         elif filter_by == BadgeTexts.OVERDUE:
             stmt = stmt.where((Room.status == RoomStatus.OCCUPIED)).having(has_payed, days_left < 0)
@@ -124,7 +123,8 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
 
         stmt = stmt.offset(skip).limit(limit)
 
-        db_rooms: list[RoomGridSummary] =  list(db.execute(stmt).scalars().all())
+        db_rooms: list[RoomGridSummary] = list(db.execute(stmt).scalars().all())
         return db_rooms
+
 
 crud_room = CRUDRoom(Room)

@@ -8,4 +8,5 @@ class EntityCountResponse(BaseModel):
     total_tenants: int
     room_status_counts : RoomStatusCount
 
+
     model_config = ConfigDict(from_attributes=True)
