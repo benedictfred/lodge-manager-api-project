@@ -1,13 +1,15 @@
 from typing import Optional
+
+from app.crud.lodge import crud_lodge
 from app.models.room import RoomFilter
 from sqlalchemy.orm import Session
 from app.core.enums import BadgeTexts
 from app.crud.payment import crud_payment
 from app.schemas.dashboard import LandlordDashboardStats
+from app.schemas.entity_count import EntityCountResponse
 from app.schemas.financial import FinancialResponse
 from app.schemas.lease import OccupiedRoomLeasesResponse
 from app.crud.room import crud_room
-from app.schemas.room import RoomGridSummary
 from app.services import lodge_service
 from typing import Union
 from app.core.enums import RoomStatus
@@ -30,7 +32,7 @@ def get_room_dashboard_summary(
         db: Session,
         lodge_id: int,
         rooms: RoomFilter,
-        filter_by: Union[BadgeTexts , RoomStatus],
+        filter_by: Union[BadgeTexts, RoomStatus] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None
 ):
@@ -47,13 +49,14 @@ def get_room_dashboard_summary(
         # vacant rooms
         rooms.vacant = crud_room.get_dashboard_rooms(db, filter_by=RoomStatus.VACANT, lodge_id=lodge_id, skip=skip,
                                                      limit=limit)
+        #maintenance rooms
         rooms.maintenance = crud_room.get_dashboard_rooms(db, filter_by=RoomStatus.MAINTENANCE, lodge_id=lodge_id,
                                                           skip=skip, limit=limit)
 
     else:
         filtered_rooms = crud_room.get_dashboard_rooms(db, filter_by=filter_by, lodge_id=lodge_id, skip=skip,
                                                        limit=limit)
-        filter_badge_text = filtered_rooms[0].badge_text.lower()
+        filter_badge_text = filtered_rooms[0].
         setattr(rooms, filter_badge_text, filtered_rooms)
 
     return OccupiedRoomLeasesResponse(
@@ -63,14 +66,21 @@ def get_room_dashboard_summary(
         owing=rooms.owing
     )
 
-def get_entity_count_summary():
-    pass
+
+def get_entity_count_summary(db: Session, lodge_id: int):
+   total_entities =  crud_lodge.get_all_entities_count(db, lodge_id)
+   entity_counts = EntityCountResponse(
+       total_rooms= total_entities.
+
+   )
+
+
 
 def get_landlord_dashboard(
         db: Session,
         lodge_id: int,
         landlord_id: int,
-        filter_by: Union[BadgeTexts, RoomStatus],
+        filter_by: Union[BadgeTexts, RoomStatus] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None
 ):
@@ -81,7 +91,9 @@ def get_landlord_dashboard(
     financials = get_financial_summary(db, lodge_id=lodge_id)
 
     # Todo: count all the entities tied to the landlord's lodge( rooms, tenant, room statuses)
-
+    #count rooms , tenants, vacant, maintenance, occupied, safe , expiring, owing, overdue
+    #count because we want the totals across the entire property
+    entity_count = get_entity_count_summary(db, lodge_id=lodge_id)
     #Todo: group rooms into occupied(safe, expiring & overdue) , vacant & maintenance
     rooms = RoomFilter()
 
@@ -92,9 +104,9 @@ def get_landlord_dashboard(
     )
 
     dashboard_stats = LandlordDashboardStats(
-        financials= financials,
+        financials=financials,
+        entity_counts= entity_count,
         occupied_rooms_lease=occupied_rooms_lease,
         maintenance_rooms=rooms.maintenance,
         vacant_rooms=rooms.vacant,
     )
-

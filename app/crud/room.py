@@ -2,7 +2,6 @@ from typing import Union
 from app.core.enums import RoomStatus, BadgeTexts, BadgeVariants
 from app.crud.payment import crud_payment
 from app.models.lease import Lease
-from app.models.payment import Payment
 from app.models.room import Room
 from app.models.tenantprofile import TenantProfile
 from app.models.user import User
@@ -36,7 +35,7 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             lodge_id: int,
             skip: int = 0,
             limit: int = 50
-    ) -> list[RoomGridSummary]:
+    ) :
 
         payment_subq = crud_payment.get_payment_subq()
 
@@ -88,7 +87,7 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
         ).outerjoin(
             User, TenantProfile.user_id == User.id
         ).outerjoin(
-            payment_subq, Payment.c.lease_id == Lease.id
+            payment_subq, payment_subq.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id
         ).group_by(
@@ -122,7 +121,7 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
 
         stmt = stmt.offset(skip).limit(limit)
 
-        db_rooms: list[RoomGridSummary] = list(db.execute(stmt).scalars().all())
+        db_rooms = db.execute(stmt).all()
         return db_rooms
 
 
