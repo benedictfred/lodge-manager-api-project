@@ -2,9 +2,12 @@ from app.core.enums import TenantType, StudentLevel
 from app.db.session import  Base
 from sqlalchemy import String, Enum, ForeignKey
 from sqlalchemy.orm import relationship, mapped_column, Mapped
-from app.models.user import User
-from app.models.lodge import Lodge
-from app.models.lease import Lease
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.lodge import Lodge
+    from app.models.lease import Lease
 
 
 class TenantProfile(Base):

@@ -1,12 +1,15 @@
 from datetime import date, datetime
 from app.core.enums import LeaseStatus
 from app.db.session import Base
-from sqlalchemy import Integer, Date,  ForeignKey, Enum, DateTime
+from sqlalchemy import ForeignKey, Enum, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, mapped_column, Mapped
-from app.models.tenantprofile import TenantProfile
-from app.models.room import Room
-from app.models.payment import Payment
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.tenantprofile import TenantProfile
+    from app.models.room import Room
+    from app.models.payment import Payment
 
 
 class Lease(Base):

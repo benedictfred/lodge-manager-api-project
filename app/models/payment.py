@@ -4,7 +4,10 @@ from sqlalchemy import  ForeignKey, DateTime
 from app.db.session import Base
 from sqlalchemy.orm  import relationship, mapped_column, Mapped
 
-from app.models.lease import Lease
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.lease import Lease
 
 
 class Payment(Base):

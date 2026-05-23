@@ -1,10 +1,15 @@
 from datetime import datetime
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.db.session import Base
-from sqlalchemy import String,  DateTime, func
-from app.models.tenantprofile import TenantProfile
-from app.models.lodge import Lodge
+from sqlalchemy import String, DateTime, func
+from sqlalchemy import Enum as SQLEnum
+from typing import TYPE_CHECKING
 from app.core.enums import UserRole
+
+if TYPE_CHECKING:
+    from app.models.tenantprofile import TenantProfile
+    from app.models.lodge import Lodge
+
 
 
 class User(Base):
@@ -21,7 +26,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(nullable=False)
 
     # Fixed: Removed quotes if UserRole is imported, IDEs prefer the actual class
-    role: Mapped[UserRole] = mapped_column(default=UserRole.LANDLORD, nullable=False)
+    role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole), default=UserRole.LANDLORD, nullable=False)
 
     # Fixed: Used Python's datetime type instead of SQLAlchemy's DateTime string
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
