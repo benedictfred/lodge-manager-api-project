@@ -38,7 +38,7 @@ def add_payment_record(
     if lease.status != LeaseStatus.ACTIVE:
         raise InvalidLeaseActionError(status=lease.status)
 
-    total_payments = crud_payment.get_payments_aggregate_by_lease_id(db, lease_id=lease.id) or 0
+    total_payments = crud_payment.get_payments_aggregate_by_lease_id(db, lease_id=lease.id)
 
     if not can_add_payment(total_payments=total_payments, incoming_amt=payment_data.amount_paid,
                            agreed_amt=lease.agreed_rent_amt):

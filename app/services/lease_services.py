@@ -2,6 +2,7 @@ from typing import Optional
 from app.core.enums import LeaseStatus
 from app.crud.tenantprofile import crud_tenant
 from app.models.lease import Lease
+from app.models.lodge import Lodge
 from app.models.user import User
 from app.crud.room import crud_room
 from sqlalchemy.orm import Session

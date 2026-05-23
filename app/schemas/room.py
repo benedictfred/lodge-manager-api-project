@@ -30,7 +30,7 @@ class RoomResponse(RoomBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RoomStatusCount(BaseModel):
+class RoomStatusCounts(BaseModel):
     occupied: int
     vacant: int
     maintenance: int

@@ -16,14 +16,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         print(f'User input email: {email}')
         return db.query(self.model).filter(self.model.email == email).first()
 
-    def create(self, db: Session, obj_in: UserInternal):
-        db_user = User(
-            **obj_in.model_dump()
-        )
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-        return db_user
+
 
 
 crud_user = CRUDUser(User)

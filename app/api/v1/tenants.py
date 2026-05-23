@@ -31,11 +31,6 @@ def update_tenant_profile(
 def get_tenant_by_id(
         current_user=Depends(get_tenant_user)
 ):
-    #can be done by either landlord or tenant
-    #if landlord -> does tenant exist and in the same lodge??
-    #if tenant-> use the tenant_user obj instead (a user obj)
-
-
      return tenant_services.fetch_tenant(current_user=current_user)
 
 

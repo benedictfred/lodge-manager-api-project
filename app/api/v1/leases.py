@@ -108,7 +108,8 @@ def terminate_lease_by_id(
     #the landlord can only terminate leases in his specific lodge
     #the lease must exist
 
-    return lease_services.terminate_lease(db, lease_id=lease_id, landlord_id=current_user.id)
+    return lease_services.terminate_lease(db, lease_id=lease_id, landlord_id=current_user.id
+                                                                              )
 
 
 @router.patch('/me/terminate/{lease_id}', response_model=schema_lease.LeaseResponse)
@@ -122,7 +123,7 @@ def request_lease_termination(
     return lease_services.appeal_for_lease_termination(
         db,
         lease_id=lease_id,
-        tenant_id = current_tenant.tenantprofile.id
+        tenant_id = current_tenant.tenant_profile.id
     )
 
 

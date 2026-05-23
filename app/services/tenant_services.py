@@ -1,3 +1,5 @@
+from typing import cast
+
 from sqlalchemy.orm import Session
 
 from app.crud.lodge import crud_lodge
@@ -6,6 +8,7 @@ from app.crud.tenantprofile import crud_tenant
 from app.core.enums import UserRole
 from app.core.exceptions import UserAlreadyExistError, LodgeNotFoundError, UserNotFoundError
 from app.core.security import get_password_hash
+from app.models.lodge import Lodge
 from app.models.tenantprofile import TenantProfile
 from app.models.user import User
 from app.schemas.tenantprofile import TenantProfileCreate, TenantProfileUpdate
@@ -59,16 +62,18 @@ def update_tenant_profile(
         update_data: TenantProfileUpdate
 ):
 
-    tenant_user = base_user.tenantprofile
+    tenant_user = base_user.tenant_profile
+
     return crud_tenant.update_tenant(db, update_data=update_data, tenant_user=tenant_user, base_user=base_user)
 
 
 def fetch_tenant(
         current_user: User
 ):
-
-    tenant = current_user.tenantprofile
-    return tenant
+    tenant_profile: TenantProfile  = cast(current_user.tenant_profile)
+    if not tenant_profile:
+        raise  UserNotFoundError()
+    return tenant_profile.lodge
 
 
 def fetch_tenant_by_landlord(
@@ -81,7 +86,9 @@ def fetch_tenant_by_landlord(
     if not tenant:
         raise UserNotFoundError()
 
-    if tenant.lodge.landlord_id != current_user.id:
+    lodge: Lodge = tenant.lodge
+
+    if lodge.landlord_id != current_user.id:
         raise UserNotFoundError()
 
     return tenant

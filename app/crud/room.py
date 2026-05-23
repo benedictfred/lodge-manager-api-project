@@ -39,9 +39,10 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
 
         payment_subq = crud_payment.get_payment_subq()
 
+
         days_left = Lease.end_date - func.current_date()
-        has_payed = func.sum(payment_subq.c.total_paid) == Lease.agreed_rent_amt
-        not_payed = func.sum(payment_subq.c.total_paid) < Lease.agreed_rent_amt
+        has_payed = func.sum(payment_subq.c.total_amt_paid) == Lease.agreed_rent_amt
+        not_payed = func.sum(payment_subq.c.total_amt_paid) < Lease.agreed_rent_amt
 
         stmt = (select(
             Lease.id.label('lease_id'),
@@ -122,9 +123,8 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
         stmt = stmt.offset(skip).limit(limit)
 
         db_rooms = db.execute(stmt).mappings().all()
-        rooms_summary = [RoomGridSummary(**row) for row in db_rooms]
-
-        return rooms_summary
+        room_summary = [RoomGridSummary(**row) for row in db_rooms]
+        return room_summary
 
 
 crud_room = CRUDRoom(Room)

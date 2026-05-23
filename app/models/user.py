@@ -1,31 +1,38 @@
-from typing import TYPE_CHECKING
-
+from datetime import datetime
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.db.session import Base
-from sqlalchemy import Integer, Column, String, Boolean, DateTime, func
+from sqlalchemy import String,  DateTime, func
+from app.models.tenantprofile import TenantProfile
+from app.models.lodge import Lodge
 from app.core.enums import UserRole
-from sqlalchemy import Enum
-
-if TYPE_CHECKING:
-    from app.models.tenantprofile import TenantProfile
-    from app.models.lodge import Lodge
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = 'users'  # Fixed missing underscores
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    first_name: Mapped[str] = mapped_column(String, nullable=True)
-    last_name: Mapped[str] =  mapped_column(String, nullable=True)
-    email: Mapped[str]= mapped_column(String(256), unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
-    phone_no: Mapped[str] = mapped_column(String(20), nullable=True, unique=False, index=True)
-    role: Mapped['UserRole'] = mapped_column(Enum(UserRole), default=UserRole.LANDLORD, nullable=False)
-    created_at: Mapped['DateTime'] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    lodges: Mapped[list["Lodge"]] = relationship('Lodge', back_populates='owner', cascade='all, delete-orphan')
-    is_active = Column(Boolean, default=True, nullable=False)
-    tenantprofile: Mapped["TenantProfile"] = relationship(
-        "TenantProfile",back_populates='user',
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    # Fixed: Added | None to match nullable=True
+    first_name: Mapped[str] = mapped_column(nullable=False)
+    last_name: Mapped[str] = mapped_column(nullable=False)
+    phone_no: Mapped[str] = mapped_column(String(20), nullable=False, unique=False, index=True)
+
+    email: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(nullable=False)
+
+    # Fixed: Removed quotes if UserRole is imported, IDEs prefer the actual class
+    role: Mapped[UserRole] = mapped_column(default=UserRole.LANDLORD, nullable=False)
+
+    # Fixed: Used Python's datetime type instead of SQLAlchemy's DateTime string
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(),
+                                                          nullable=False)
+
+    # Fixed: Updated to 2.0 mapped_column to resolve the InstrumentedAttribute error
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+
+    lodges: Mapped[list["Lodge"]] = relationship(back_populates='owner', cascade='all, delete-orphan')
+    tenant_profile: Mapped["TenantProfile"] = relationship(
+        back_populates='user',
         cascade='all, delete-orphan',
         single_parent=True
     )

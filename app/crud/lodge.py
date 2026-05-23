@@ -1,4 +1,4 @@
-from sqlalchemy import or_, literal, func, select, and_
+from sqlalchemy import or_, literal, func, select, and_, RowMapping
 from sqlalchemy.orm import Session
 
 from app.core.enums import RoomStatus
@@ -36,7 +36,7 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             self.model.landlord_id == landlord_id
         ).offset(skip).limit(limit).all()
 
-    def get_all_entities_count(self, db: Session, lodge_id: int):
+    def get_all_entities_count(self, db: Session, lodge_id: int)  :
         payment_subq = crud_payment.get_payment_subq()
 
         days_left = Lease.end_date - func.current_date()
@@ -47,12 +47,14 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
         EXPIRING_DAYS_START = 30
         EXPIRING_DAYS_END = 0
 
-
-        room_count_scalar_subq = select(func.count(Room.id)).scalar_subquery()
+        room_count_scalar_subq = select(func.count(Room.id).label('room_count')).scalar_subquery()
         tenant_count_scalar_subq = select(func.count(TenantProfile.id).label('tenant_count')).scalar_subquery()
-        vacant_count_scalar_subq = select(func.count(Room.status == RoomStatus.VACANT).label('vacant')).scalar_subquery()
-        maintenance_count_scalar_subq = select(func.count(Room.status == RoomStatus.MAINTENANCE).label('maintenance')).scalar_subquery()
-        occupied_count_scalar_subq = select(func.count(Room.status == RoomStatus.OCCUPIED).label('occupied')).scalar_subquery()
+        vacant_count_scalar_subq = select(
+            func.count(Room.status == RoomStatus.VACANT).label('vacant')).scalar_subquery()
+        maintenance_count_scalar_subq = select(
+            func.count(Room.status == RoomStatus.MAINTENANCE).label('maintenance')).scalar_subquery()
+        occupied_count_scalar_subq = select(
+            func.count(Room.status == RoomStatus.OCCUPIED).label('occupied')).scalar_subquery()
         safe_count_scalar_subq = select(func.count(
             and_(Room.status == RoomStatus.OCCUPIED, days_left >= SAFE_DAYS, has_payed)
         ).label('safe')).scalar_subquery()
@@ -71,7 +73,7 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
         ).label('owing')).scalar_subquery()
 
         stmt = select(
-            room_count_scalar_subq.label('room_count'),
+            room_count_scalar_subq,
             tenant_count_scalar_subq,
             vacant_count_scalar_subq,
             maintenance_count_scalar_subq,
@@ -90,9 +92,7 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             Room.status,
         )
 
-        db_entity_count =   db.execute(stmt).mappings().first()
-        return  EntityCountResponse(**db_entity_count) if db_entity_count else None
-
+        return db.execute(stmt).mappings().first()
 
 
 crud_lodge = CRUDLodge(Lodge)
