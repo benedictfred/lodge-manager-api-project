@@ -1,142 +1,167 @@
-# LodgeOps API 🏘️
+# LodgeManager API
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)
-![Status](https://img.shields.io/badge/Status-Work_in_Progress-orange.svg)
-[![GitHub](https://img.shields.io/badge/GitHub-DonaldXoftDev-181717?logo=github)](https://github.com/DonaldXoftDev/LodgeManagerAPIProject)
+**A Modern Property & Lodge Management System** built with **FastAPI** and **React** — Designed for efficient management of student accommodations and rental properties in Nigeria.
 
-> **🚧 Work In Progress:** This project is currently in active development (MVP Phase). Core modules like Identity and Property Management are stable, while Lease and Payment orchestration are actively being built.
-
-**LodgeOps** is a comprehensive B2B2C Software-as-a-Service (SaaS) backend designed to digitize and automate the entire property management lifecycle, specifically tailored for student accommodations and multi-unit lodges. 
-
-Built to replace fragmented manual ledgers, messy spreadsheets, and informal messaging apps, this API provides a unified, secure digital ecosystem. It is engineered with an **Outside-In** architectural philosophy, acting as a Backend-For-Frontend (BFF). This ensures that complex database queries and business math are executed entirely on the server, delivering highly optimized, context-aware JSON payloads directly to modern frontend dashboards.
-
-### 🎯 Core Capabilities
-* **Frictionless Onboarding:** Self-serve tenant registration via custom landlord invite links, eliminating manual data entry.
-* **Portfolio Scaling:** Centralized management for landlords overseeing multiple lodges, complete with real-time room occupancy tracking.
-* **Lease Orchestration:** Automated mapping of tenants to physical rooms with strict timeline validation.
-* **Digital Financial Ledgers:** Immutable transaction logs that automatically calculate expected revenue versus collected payments to instantly flag outstanding balances.
-* **Stateless Security:** Strictly separated, role-based access environments for Landlords and Tenants utilizing JWT (JSON Web Tokens) authentication.
+---
 
 ## Table of Contents
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Local Setup](#local-setup)
-- [API Documentation](#api-documentation)
-- [Development Roadmap](#development-roadmap)
 
-<a id="tech-stack"></a>
-## Tech Stack
-* **Framework:** FastAPI
-* **Database & ORM:** SQLite (Dev) & SQLAlchemy
-* **Migrations:** Alembic
-* **Authentication:** OAuth2 with JWT (JSON Web Tokens)
-* **Validation & Serialization:** Pydantic
-* **Security:** Passlib (Bcrypt)
+- [🚀 Current Status](#-current-status)
+- [✨ Features](#-features)
+- [🛠 Tech Stack](#-tech-stack)
+- [📁 Project Structure](#-project-structure)
+- [🚀 Getting Started](#-getting-started)
+- [📋 Development Roadmap](#-development-roadmap)
+- [🤝 Contributing](#-contributing)
+- [📞 Contact](#-contact)
 
-<a id="project-structure"></a>
-## Project Structure
+---
 
-```text
-LodgeOpsAPI/
-├── alembic/                # Database migration configurations
-├── app/                    # Main application source code
-│   ├── api/v1/             # Route handlers and endpoints
-│   ├── core/               # Application config, exceptions, and security logic
-│   ├── crud/               # Database query operations
-│   ├── db/                 # Database connection and session management
-│   ├── models/             # SQLAlchemy ORM models
-│   ├── schemas/            # Pydantic validation models
-│   ├── services/           # Business logic and cross-domain orchestration
-│   └── main.py             # Application entry point
-├── .env.example            # Environment variables template
-├── requirements.txt        # Project dependencies
-└── README.md               # Project documentation
+## 🚀 Current Status
+
+**Active Development** — Finishing touches on **Landlord Dashboard**
+
+- **Backend Completion**: ~85%
+- **Frontend Completion**: ~70% (React)
+
+This is my **first major backend project**, built using Just-In-Time (JIT) learning with FastAPI.
+
+---
+
+## ✨ Features
+
+### Backend (FastAPI)
+
+- **Authentication & Authorization**
+  - JWT-based authentication
+  - Role-based access control (**Landlord** & **Tenant**)
+  - Secure password hashing with Passlib + Bcrypt
+
+- **Core Business Modules**
+  - Lodge / Property Management
+  - Room Management
+  - Tenant Management
+  - Lease & Contract Management
+  - Payment Tracking
+
+- **Technical Highlights**
+  - Clean Architecture (API → Services → CRUD → Models)
+  - SQLAlchemy 2.0 with Alembic migrations
+  - Pydantic v2 schemas
+  - Dependency Injection
+  - Custom exception handling
+
+### Frontend (React)
+
+- Modern React.js frontend (built by collaborator)
+- Landlord Dashboard (Currently in active development)
+- Tenant Portal (Planned)
+
+---
+
+## 🛠 Tech Stack
+
+| Layer          | Technology                          |
+|----------------|-------------------------------------|
+| **Backend** | Python 3.11+, FastAPI               |
+| **ORM** | SQLAlchemy 2.0 + Alembic            |
+| **Validation** | Pydantic v2                         |
+| **Auth** | JWT, Passlib + Bcrypt               |
+| **Database** | SQLite (Dev) → PostgreSQL (Target)  |
+| **Frontend** | React.js                            |
+| **Tools** | Pydantic Settings, Git              |
+
+---
+
+## 📁 Project Structure
+
+```bash
+app/
+├── api/v1/           # API Routes (v1)
+├── core/             # Configuration, Security, Exceptions
+├── crud/             # Database CRUD operations
+├── models/           # SQLAlchemy database models
+├── schemas/          # Pydantic request/response models
+├── services/         # Business logic layer
+├── db/               # Database configuration & session
+├── main.py           # Application entry point
+└── ...
 ```
 
-<a id="local-setup"></a>
-## Local Setup
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-* Python 3.10+
-* Git
+- Python 3.11 or higher
+- Node.js (for frontend)
+- PostgreSQL (recommended for production)
 
-### Installation Steps
+### Backend Setup
 
-1. **Clone the repository:**
 ```bash
-git clone [https://github.com/DonaldXoftDev/LodgeManagerAPIProject.git](https://github.com/DonaldXoftDev/LodgeManagerAPIProject.git)
+# 1. Clone the repository
+git clone https://github.com/DonaldXoftDev/LodgeManagerAPIProject.git
 cd LodgeManagerAPIProject
-```
 
-2. **Create and activate a virtual environment:**
-```bash
-# Windows
+# 2. Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate
+source venv/bin/activate          # Windows: venv\Scripts\activate
 
-# macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
-```
-
-3. **Install dependencies:**
-```bash
+# 3. Install dependencies
 pip install -r requirements.txt
-```
 
-4. **Set up Environment Variables:**
-Create a `.env` file in the root directory by copying the provided example structure.
-```bash
-# Linux/macOS
+# 4. Setup environment variables
 cp .env.example .env
 
-# Windows
-copy .env.example .env
-```
-*Make sure your `.env` file contains the following (update values as needed for your local machine):*
-```env
-# Database Configuration
-DATABASE_URL=sqlite:///./lodge_manager.db
-
-# Security & Authentication
-SECRET_KEY=your-super-secret-development-key-change-me
-```
-
-5. **Run database migrations:**
-Initializes the SQLite database and applies the latest schema:
-```bash
+# 5. Run database migrations
 alembic upgrade head
-```
 
-6. **Start the development server:**
-```bash
+# 6. Start the server
 uvicorn app.main:app --reload
 ```
 
-<a id="api-documentation"></a>
-## API Documentation
-FastAPI automatically generates interactive API documentation. Once the server is running, navigate to:
-* **Swagger UI:** `http://127.0.0.1:8000/docs`
-* **ReDoc:** `http://127.0.0.1:8000/redoc`
-
-<a id="development-roadmap"></a>
-## Development Roadmap
-
-### Phase 1: IAM & Core Entities (✅ Complete)
-- [x] Base User models and JWT Auth flow
-- [x] Landlord Registration
-- [x] Self-serve Tenant Registration
-- [x] Lodge and Room CRUD operations
-
-### Phase 2: Lease & Financials (🏗️ In Progress)
-- [ ] Lease assignment (bridging Tenant and Room)
-- [ ] Manual payment logging
-- [ ] Lease timeline validation (start/end dates)
-
-### Phase 3: Analytics & BFF (Upcoming)
-- [ ] Landlord aggregate financial dashboard endpoint
-- [ ] Tenant active status endpoint
+### Access API Documentation:
+- **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ---
-*Built and Maintained by [Donald Xoft Dev](https://github.com/DonaldXoftDev).* 🚀
+
+## 📋 Development Roadmap
+
+### Phase 1 (In Progress)
+- Complete Landlord Dashboard features
+- Polish authentication & authorization
+- Improve error handling and validation
+
+### Phase 2 (Next)
+- Switch from SQLite to PostgreSQL
+- Add comprehensive tests (pytest)
+- Docker + Docker Compose setup
+- Full integration with React frontend
+
+### Phase 3 (Future)
+- Payment gateway integration (Paystack / Flutterwave)
+- Email & push notifications
+- Analytics & reporting
+- Tenant mobile application
+
+---
+
+## 🤝 Contributing
+
+This is my first major backend project. I built it while learning FastAPI on the job (JIT learning).
+Feedback, suggestions, and contributions are very welcome!
+Feel free to open issues or submit pull requests.
+
+---
+
+## 📞 Contact
+
+**DonaldXoftDev**
+Aspiring Backend Developer (Python + FastAPI)
+Nigeria
+GitHub: [@DonaldXoftDev](https://github.com/DonaldXoftDev)
+
+*Building practical solutions for the Nigerian student housing market.*
+*Made with ❤️ for Nigerian landlords and property managers*
