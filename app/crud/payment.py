@@ -22,7 +22,7 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         return db.query(self.model).filter(self.model.lease_id == lease_id).offset(skip).limit(limit).all()
 
     def get_potential_income_from_rooms(self, db: Session, lodge_id: int):
-        stmt = select(func.sum(Room.base_rent_price).label('potential_revenue').where(Room.lodge_id == lodge_id))
+        stmt = select(func.sum(Room.base_rent_price).label('potential_revenue')).where(Room.lodge_id == lodge_id)
 
         return db.execute(stmt).scalar()
 
@@ -48,7 +48,7 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         ).select_from(Lease).outerjoin(
             payment_subq, payment_subq.c.lease_id == Lease.id
         ).join(
-            Room., Room.id == Lease.room_id
+            Room, Room.id == Lease.room_id
         ).where(
             Room.lodge_id == lodge_id, Lease.status == LeaseStatus.ACTIVE
         ))
@@ -60,7 +60,7 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         total_paid_expr = func.coalesce(func.sum(Payment.amount_paid), 0)
 
         stmt = select(
-            case(agreed_rent_expr - total_paid_expr).label('unpaid_rent')
+            (agreed_rent_expr - total_paid_expr).label('unpaid_rent')
         ).where(Room.lodge_id == lodge_id)
 
         return db.execute(stmt).scalar()

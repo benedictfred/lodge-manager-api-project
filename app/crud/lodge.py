@@ -36,19 +36,19 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             self.model.landlord_id == landlord_id
         ).offset(skip).limit(limit).all()
 
-    def get_all_entities_count(self, db: Session, lodge_id: int)  :
+    def get_all_entities_count(self, db: Session, lodge_id: int):
         payment_subq = crud_payment.get_payment_subq()
 
         days_left = Lease.end_date - func.current_date()
-        has_payed = func.sum(payment_subq.c.total_paid) == Lease.agreed_rent_amt
-        not_payed = func.sum(payment_subq.c.total_paid) < Lease.agreed_rent_amt
+        has_payed = payment_subq.c.total_amt_paid == Lease.agreed_rent_amt
+        not_payed = func.payment_subq.c.total_amt_paid < Lease.agreed_rent_amt
 
         SAFE_DAYS = 90
         EXPIRING_DAYS_START = 30
         EXPIRING_DAYS_END = 0
 
-        room_count_scalar_subq = select(func.count(Room.id).label('room_count')).scalar_subquery()
-        tenant_count_scalar_subq = select(func.count(TenantProfile.id).label('tenant_count')).scalar_subquery()
+        room_count_scalar_subq = select(func.count(Room.id).label('total_rooms')).scalar_subquery()
+        tenant_count_scalar_subq = select(func.count(TenantProfile.id).label('total_tenants')).scalar_subquery()
         vacant_count_scalar_subq = select(
             func.count(Room.status == RoomStatus.VACANT).label('vacant')).scalar_subquery()
         maintenance_count_scalar_subq = select(
@@ -91,7 +91,9 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             TenantProfile.id,
             Room.status,
         )
-
+        #group all room related data into a single query to the db(vacant, maintenance, safe, expiring, overdue, owing, occupied)
+        #sum the total number of tenants in the tenant table
+        
         return db.execute(stmt).mappings().first()
 
 

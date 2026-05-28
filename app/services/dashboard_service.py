@@ -93,7 +93,7 @@ def get_landlord_dashboard(
         limit: Optional[int] = None
 ):
     # check if the lodge exist and is owned by the landlord
-    lodge_service.verify_lodge_ownership(lodge_id=lodge_id, landlord_id=landlord_id)
+    lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_id)
 
     #TODO: SUM ALL financial for the landlords revenue(expected, collected & outstanding)
     financials = get_financial_summary(db, lodge_id=lodge_id)
