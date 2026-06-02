@@ -1,5 +1,9 @@
+from enum import Enum
+from typing import Optional, Annotated
+
+from fastapi import Query
 from pydantic import BaseModel, ConfigDict
-from app.core.enums import BadgeTexts,BadgeVariants
+from app.core.enums import BadgeTexts, BadgeVariants, RoomStatus
 from app.schemas.entity_count import EntityCountResponse
 from app.schemas.financial import FinancialResponse
 from app.schemas.lease import OccupiedRoomLeasesResponse
@@ -7,7 +11,7 @@ from app.schemas.room import RoomGridSummary
 
 
 class LandlordDashboardStats(BaseModel):
-    financials : FinancialResponse
+    financials: FinancialResponse
     entity_counts: EntityCountResponse
     occupied_rooms_lease: OccupiedRoomLeasesResponse
     vacant_rooms: list[RoomGridSummary]
@@ -16,22 +20,24 @@ class LandlordDashboardStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+
+
 if __name__ == "__main__":
     mock_dashboard_stats_dict = {
         'financials': {
             'potential_revenue': 5000000,
-            'expected_revenue':  4500000,
+            'expected_revenue': 4500000,
             'collected_revenue': 3500000,
             'unpaid_rent': 750000
 
         },
-        'entity_counts':  {
+        'entity_counts': {
             'total_rooms': 40,
             'total_tenants': 35,
             'room_status_counts': {
                 'occupied': 30,
                 'vacant': 6,
-                'maintenance':   4
+                'maintenance': 4
             },
             'occupied_counts': {
                 'safe': 10,
@@ -67,7 +73,7 @@ if __name__ == "__main__":
                     'sub_display_text': '101 days left'
                 },
 
-            ] ,
+            ],
             'expiring': [
                 {
                     'lease_id': 1,

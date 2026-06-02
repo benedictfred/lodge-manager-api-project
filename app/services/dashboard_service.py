@@ -70,15 +70,16 @@ def get_room_dashboard_summary(
 
 
 def get_entity_count_summary(db: Session, lodge_id: int):
-    raw_entity_counts = crud_lodge.get_all_entities_count(db, lodge_id)
-
-    room_status_counts = RoomStatusCounts(**raw_entity_counts)
-    occupied_counts = OccupiedCounts(**raw_entity_counts)
+    room_status_counts =crud_lodge.get_room_status_counts(db, lodge_id=lodge_id)
+    total_rooms = {'total_rooms': sum(room_status_counts.values()) if room_status_counts else 0}
+    total_tenants = crud_lodge.get_tenant_counts(db, lodge_id=lodge_id)
+    occupied_count = crud_lodge.get_occupied_counts(db, lodge_id=lodge_id)
 
     total_entity_counts = EntityCountResponse(
-        **raw_entity_counts,
-        room_status_counts=room_status_counts,
-        occupied_counts=occupied_counts
+        **total_rooms,
+        **total_tenants,
+        room_status_counts=RoomStatusCounts(**room_status_counts),
+        occupied_counts=OccupiedCounts(**occupied_count)
     )
     return total_entity_counts
 
@@ -97,10 +98,10 @@ def get_landlord_dashboard(
 
     #TODO: SUM ALL financial for the landlords revenue(expected, collected & outstanding)
     financials = get_financial_summary(db, lodge_id=lodge_id)
-
+    print(financials.model_dump_json(indent=4))
     # Todo: count all the entities tied to the landlord's lodge( rooms, tenant, room statuses)
     entity_count = get_entity_count_summary(db, lodge_id=lodge_id)
-
+    print(entity_count.model_dump_json(indent=4))
     #Todo: group rooms into occupied(safe, expiring & overdue) , vacant & maintenance
     rooms = RoomFilter()
 

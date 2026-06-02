@@ -1,15 +1,11 @@
-from multiprocessing.util import sub_debug
-
 from sqlalchemy.orm import Session
-
 from app.core.enums import LeaseStatus
 from app.models.lease import Lease
-from app.models.lodge import Lodge
 from app.models.payment import Payment
 from app.models.room import Room
 from app.schemas.payment import PaymentCreate, PaymentResponse
 from app.crud.base_crud import CRUDBase
-from sqlalchemy import func, select, case
+from sqlalchemy import func, select
 
 
 class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
@@ -55,13 +51,17 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
 
         return db.execute(stmt).mappings().first()
 
-    def get_total_unpaid_rent(self, db: Session, lodge_id: int) -> int:
+    def get_total_unpaid_rent(self, db: Session, lodge_id: int):
+        payment_subq = self.get_payment_subq()
         agreed_rent_expr = func.coalesce(func.sum(Lease.agreed_rent_amt), 0)
-        total_paid_expr = func.coalesce(func.sum(Payment.amount_paid), 0)
+        total_paid_expr = func.coalesce(func.sum(payment_subq.c.total_amt_paid), 0)
 
         stmt = select(
             (agreed_rent_expr - total_paid_expr).label('unpaid_rent')
-        ).where(Room.lodge_id == lodge_id)
+        ).select_from(Lease).join(
+            payment_subq, payment_subq.c.lease_id == Lease.id).join(
+            Room, Lease.room_id == Room.id).where(Room.lodge_id == lodge_id)
+
 
         return db.execute(stmt).scalar()
 

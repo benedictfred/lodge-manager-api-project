@@ -6,7 +6,7 @@ from app.models.lodge import Lodge
 from app.models.user import User
 from app.crud.room import crud_room
 from sqlalchemy.orm import Session
-from app.schemas.lease import LeaseCreate
+from app.schemas.lease import LeaseCreate, LeaseUpdate
 from app.services import lodge_service
 from app.crud.lease import crud_lease
 from app.core.exceptions import (RoomNotFoundError, UserNotFoundError,
@@ -96,7 +96,7 @@ def verify_lease_to_terminate(
     if not lease:
         raise LeaseNotFoundError()
 
-    # lease cannot be terminated if it has already been terminated or is expired
+    # don't terminate a lease if it has already been terminated or is expired
     if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.EXPIRED]:
         raise InvalidLeaseActionError(status=lease.status)
 
@@ -121,6 +121,21 @@ def terminate_lease(
 
     return crud_lease.lease_terminate(db, db_lease=lease)
 
+def update_lease_details(
+        db: Session,
+        lease_id: int,
+        update_data: LeaseUpdate,
+        landlord_id: int,
+):
+    lease = crud_lease.get(db, item_id=lease_id)
+
+    if not lease :
+        return LeaseNotFoundError()
+
+    if lease.room.lodge.landlord_id !=  landlord_id:
+        return LeaseNotFoundError()
+
+    return crud_lease.update_lease(db, db_lease=lease, lease_data=update_data)
 
 def appeal_for_lease_termination(
         db:Session,
@@ -134,7 +149,7 @@ def appeal_for_lease_termination(
 
     lease = verify_lease_to_terminate(db, lease_id=lease_id)
 
-    if lease.tenant_id != tenant_id:
+    if not verify_tenant_owns_lease(lease=lease, tenant_id=tenant_id):
         raise LeaseNotFoundError()
 
     if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.PENDING_TERMINATION, LeaseStatus.EXPIRED]:

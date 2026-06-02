@@ -1,4 +1,5 @@
 from app.core.enums import LeaseStatus
+from app.crud.lease import crud_lease
 from app.schemas import lease as schema_lease
 from typing import List, Optional
 from fastapi import APIRouter, Depends
@@ -81,24 +82,17 @@ def get_tenant_leases(
 
 
 
-# @router.patch('/{lease_id}', response_model=schema_lease.LeaseResponse)
-# def update_lease_by_id(
-#         lease_id: int,
-#         lease_data: schema_lease.LeaseUpdate,
-#         db: Session = Depends(get_db),
-#         current_user: LandLord = Depends(get_current_user)
-# ):
-#     lease = crud_lease.get_lease(db=db, lease_id=lease_id)
-#
-#     if not lease:
-#         raise HTTPException(
-#             status_code=404,
-#             detail='Lease not Found'
-#
-#         )
-#     return crud_lease.update_lease(db=db, lease_data=lease_data, db_lease=lease)
-#
-#
+@router.patch('/{lease_id}', response_model=schema_lease.LeaseResponse)
+def update_lease_by_id(
+        lease_id: int,
+        lease_data: schema_lease.LeaseUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_landlord_user)
+):
+    
+    return lease_services.update_lease_details(db, lease_id=lease_id, update_data=lease_data, landlord_id=current_user.id)
+
+
 @router.patch('/terminate/{lease_id}', response_model=schema_lease.LeaseResponse)
 def terminate_lease_by_id(
         lease_id: int,
