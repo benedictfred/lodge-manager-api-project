@@ -46,19 +46,10 @@ def client(test_db):
 
 
 @pytest.fixture
-def authenticated_landlord_client(client, add_landlord_to_db, mock_landlord_schema):
+def authenticated_landlord_client(auth_client_factory, add_landlord_to_db, mock_landlord_schema):
     l_schema = mock_landlord_schema
-    payload = {
-        'username': l_schema.email,
-        'password': l_schema.password
-    }
-    response = client.post('/api/v1/auth/login', data=payload)
-    token = response.json()['access_token']
 
-    client.headers = {
-        'Authorization': f'Bearer {token}'
-    }
-
+    client = auth_client_factory(email=l_schema.email, password=l_schema.password)
     return client
 
 @pytest.fixture
@@ -70,6 +61,7 @@ def auth_client_factory(client):
             'password': password
         }
         response = client.post('/api/v1/auth/login', data=payload)
+        print(response)
         token = response.json()['access_token']
 
         client.headers = {

@@ -1,8 +1,8 @@
-import pytest
+
 from fastapi import status
 
 
-def test_landlord_register_lodge_returns_200(authenticated_landlord_client, mock_lodge_schema):
+def test_landlord_register_lodge_returns_200(authenticated_landlord_client,mock_landlord_schema, mock_lodge_schema):
     payload = mock_lodge_schema.model_dump()
 
     response = authenticated_landlord_client.post('/api/v1/lodges/register', json=payload)
