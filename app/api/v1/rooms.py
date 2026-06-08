@@ -7,7 +7,9 @@ from app.api.deps import get_db, get_current_user, get_landlord_user
 from app.models.user import User
 from app.services import room_service
 from app.core.exceptions import LodgeNotFoundError
+
 router = APIRouter()
+
 
 @router.get('/{lodge_id}/rooms', response_model=List[schema_room.RoomResponse])
 def get_all_rooms(
@@ -17,7 +19,6 @@ def get_all_rooms(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
-
     return room_service.get_lodge_rooms(
         db,
         lodge_id=lodge_id,
@@ -27,20 +28,16 @@ def get_all_rooms(
     )
 
 
-
 @router.post('/', response_model=schema_room.RoomResponse)
 def create_room(
         room_in: schema_room.RoomCreate,
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
-
     return room_service.create_room_for_lodge(
         db=db, room_in=room_in,
         landlord_id=landlord_user.id
     )
-
-
 
 
 @router.get('/{lodge_id}/rooms/{room_id}', response_model=schema_room.RoomResponse)
@@ -50,10 +47,8 @@ def get_room(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-
-     room = room_service.get_room_details(db, lodge_id=lodge_id, landlord_id=current_user.id, room_id=room_id)
-     return room
-
+    room = room_service.get_room_details(db, lodge_id=lodge_id, landlord_id=current_user.id, room_id=room_id)
+    return room
 
 
 @router.patch('/{room_id}', response_model=schema_room.RoomResponse)
@@ -64,13 +59,9 @@ def update_room_by_id(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
-
-
-
     updated_room = room_service.update_room_details(
         db, room_id=room_id,
         update_data=update_data,
         landlord_id=landlord_user.id
     )
     return updated_room
-
