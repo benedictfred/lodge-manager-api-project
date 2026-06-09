@@ -9,7 +9,7 @@ class RoomBase(BaseModel):
     room_no: str
     description: Optional[str] = None
     base_rent_price: int = Field(default=200000, ge=0)
-    status: RoomStatus = RoomStatus.VACANT
+    status: RoomStatus
 
     @field_validator('room_no', 'description')
     @classmethod
@@ -22,7 +22,7 @@ class RoomCreate(RoomBase):
     pass
 
 
-class RoomResponse(RoomBase):
+class RoomResponse(RoomCreate):
     id: int
     created_at: datetime
 

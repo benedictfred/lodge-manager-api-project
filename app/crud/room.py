@@ -1,5 +1,6 @@
 from app.core.enums import BadgeVariants, LeaseStatus, BadgeTexts, RoomStatus
 from app.models.lease import Lease
+from app.models.lodge import Lodge
 from app.models.room import Room
 from app.models.tenantprofile import TenantProfile
 from app.models.user import User
@@ -24,9 +25,11 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             self.model.room_no == room_no
         ).first()
 
-    def get_rooms(self, db: Session, lodge_id: int, skip: int = 0, max_limit: int = 50):
+    def get_rooms(self, db: Session, skip: int = 0, max_limit: int = 50):
         """Retrieve a list of rooms with pagination support."""
-        return db.query(self.model).filter(self.model.lodge_id == lodge_id).offset(skip).limit(max_limit).all()
+        stmt = select(self.model).join(Lodge).offset(skip).limit(limit=max_limit)
+        return db.execute(stmt).scalars().all()
+
 
     def get_dashboard_rooms(
             self,
@@ -36,6 +39,7 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             skip: int = 0,
             limit: int = 50
     ) :
+
         stmt = (select(
             Lease.id.label('lease_id'),
             Room.room_no.label('room_no'),
