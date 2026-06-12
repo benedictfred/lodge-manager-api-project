@@ -48,10 +48,7 @@ def fetch_lodge_tenants(
         skip: int,
         limit: int
 ):
-    lodge = lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_user.id)
-    if not lodge:
-        raise LodgeNotFoundError()
-
+    lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_user.id)
     tenants = crud_tenant.get_tenants(db, lodge_id=lodge_id, skip=skip, max_limit=limit)
     return tenants
 

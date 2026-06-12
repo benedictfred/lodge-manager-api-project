@@ -2,12 +2,10 @@ from typing import Optional
 from app.core.enums import LeaseStatus
 from app.crud.tenantprofile import crud_tenant
 from app.models.lease import Lease
-from app.models.lodge import Lodge
 from app.models.user import User
-from app.crud.room import crud_room
 from sqlalchemy.orm import Session
 from app.schemas.lease import LeaseCreate, LeaseUpdate
-from app.services import lodge_service
+from app.services import lodge_service, room_service
 from app.crud.lease import crud_lease
 from app.core.exceptions import (RoomNotFoundError, UserNotFoundError,
                                  LodgeNotFoundError, LeaseNotFoundError,  InvalidLeaseActionError)
@@ -18,17 +16,11 @@ def create_new_lease(
         lease_data: LeaseCreate,
         landlord_user: User
 ):
-    room = crud_room.get(db, item_id=lease_data.room_id)
-
-    if not room:
-        raise RoomNotFoundError()
-
-    if room.lodge.landlord_id != landlord_user.id:
-        raise RoomNotFoundError()
+    room = room_service.verify_room_existence(db, landlord_id=landlord_user.id, room_id=lease_data.room_id)
 
     tenant = crud_tenant.get(db, item_id=lease_data.tenant_id)
 
-    if not tenant:
+    if not tenant or tenant.lodge.landlord_id != landlord_user.id:
         raise UserNotFoundError()
 
     active_lease = crud_lease.get_active_room_and_tenant_lease(
@@ -107,10 +99,6 @@ def terminate_lease(
         lease_id: int,
         landlord_id: int,
 ):
-    #find the lease with that id
-    #use the room_id to find the room associated with that lease
-    #check if the landlord owns the lodge the current found room is in
-    #if all checks are done and the landlord does own the lodge , terminate the lease
 
     lease = verify_lease_to_terminate(db, lease_id=lease_id)
 
@@ -142,10 +130,6 @@ def appeal_for_lease_termination(
         lease_id: int,
         tenant_id: int
 ):
-    #find lease with that id,
-    #verify that the lease is terminatable
-    #verify lease's tenant_id matches that of the current tenant
-    #appeal for lease termination
 
     lease = verify_lease_to_terminate(db, lease_id=lease_id)
 

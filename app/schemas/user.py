@@ -38,6 +38,9 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
     phone_no: Optional[str] = None
 
+
+
+
 class SecurityUserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = Field(..., min_length=8, max_length=128)

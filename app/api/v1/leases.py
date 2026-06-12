@@ -27,9 +27,6 @@ def create_new_lease(
 
 
 
-
-
-
 @router.get('/{lodge_id}', response_model=List[schema_lease.LeaseResponse])
 def get_leases_for_landlord(
         lodge_id: int,
@@ -77,8 +74,6 @@ def get_tenant_leases(
             status=status
 
         )
-
-
 
 
 

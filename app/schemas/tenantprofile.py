@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from typing import Optional
@@ -15,6 +15,12 @@ class TenantBase(BaseModel):
     reg_no: Optional[int] = None
     department: Optional[str] = None
 
+    @field_validator('emergency_contact_name', 'emergency_contact_phone_no',
+                     mode='before')
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return value.strip().lower()
+
 
 class TenantProfileCreate(BaseModel):
     user_info: UserCreate
@@ -28,6 +34,8 @@ class TenantInfoUpdate(BaseModel):
     level: Optional[StudentLevel] = None
     reg_no: Optional[int] = None
     department: Optional[str] = None
+
+
 
 class TenantProfileResponse(TenantBase):
     id: int

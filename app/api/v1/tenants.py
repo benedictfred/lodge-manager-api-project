@@ -1,15 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
-from app.core.exceptions import UserNotFoundError
 from app.schemas import tenantprofile as schema_tenant
 from app.crud.tenantprofile import crud_tenant
-from typing import List
 from app.api.deps import get_db, get_current_user, get_landlord_user, get_tenant_user
 from app.models.user import User
 from app.services import tenant_services
 
 router = APIRouter()
+
+
 
 
 @router.patch('/profiles/me', response_model=schema_tenant.TenantProfileResponse)

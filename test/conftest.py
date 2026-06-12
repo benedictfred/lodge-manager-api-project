@@ -3,6 +3,7 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 import random
+from datetime import date, timedelta
 
 from app.api.deps import get_db
 from app.core import security
@@ -11,10 +12,11 @@ from app.main import app
 from app.db.session import Base
 from fastapi.testclient import TestClient
 from app.schemas import user as schema_user
-from app.services import user_service, lodge_service, tenant_services, room_service
+from app.services import user_service, lodge_service, tenant_services, room_service, lease_services
 from app.schemas import tenantprofile as schema_tenant
 from app.schemas import lodge as schema_lodge
 from app.schemas import room as schema_room
+from app.schemas import lease as schema_lease
 
 SQLALCHEMY_DATABASE_URL = 'sqlite:///:memory:'
 
@@ -116,13 +118,7 @@ def mock_landlord_schema(landlord_schema_factory):
 
 
 
-@pytest.fixture
-def mock_tenant_user_schema():
-    """
-    A pytest fixture that provides a mock tenant user schema.
-    """
-    return schema_user.UserCreate(first_name='Tenant', last_name='A',
-                                  email='tenant@test.com', password='Tenant12345', phone_no='08108417160')
+
 
 @pytest.fixture
 def mock_lodge_schema(lodge_schema_factory):
@@ -142,23 +138,46 @@ def mock_update_lodge_schema():
     )
 
 @pytest.fixture
-def mock_tenant_schema(mock_tenant_user_schema):
+def tenant_schema_factory(add_lodge_to_db):
+    """
+    A pytest fixture that provides a factory for creating tenant schemas.
+    """
+    def _create(
+            first_name: str = 'Tenant',
+            last_name: str = 'A',
+            email: str = 'tenant@test.com',
+            lodge_id: int = add_lodge_to_db.id,
+            level: StudentLevel = StudentLevel.LEVEL_200,
+            tenant_type: TenantType = TenantType.STUDENT
+    ):
+        user_info = schema_user.UserCreate(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password='Tenant12345',
+            phone_no='08108417160'
+        )
+        return schema_tenant.TenantProfileCreate(
+            user_info=user_info,
+            tenant_info=schema_tenant.TenantBase(
+                lodge_id=lodge_id,
+                level=level,
+                tenant_type=tenant_type,
+                emergency_contact_name='mrs bond',
+                emergency_contact_phone_no='0834124859',
+                reg_no=random.randint(1000000, 9999999)
+            )
+        )
+    return _create
+
+#a factory fixture for creating a tenant in a lodge
+
+@pytest.fixture
+def mock_tenant_schema(tenant_schema_factory):
     """
     A pytest fixture that provides a mock tenant schema.
     """
-    return schema_tenant.TenantProfileCreate(
-        user_info=mock_tenant_user_schema,
-        tenant_info=schema_tenant.TenantBase(
-            lodge_id=1,
-            level=StudentLevel.LEVEL_200,
-            tenant_type=TenantType.STUDENT,
-            emergency_contact_name='mrs bond',
-            emergency_contact_phone_no='0834124859',
-            reg_no=298456718495
-
-
-        )
-    )
+    return tenant_schema_factory()
 
 @pytest.fixture
 def room_schema_factory(add_lodge_to_db):
@@ -285,11 +304,23 @@ def rooms_in_lodge(test_db,room_schema_factory, add_landlord_to_db, add_lodge_to
     return rooms_in_db
 
 @pytest.fixture
-def tenants_in_db(test_db, add_landlord_to_db):
+def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db):
     """
-    A pytest fixture that adds multiple tenants to the database.
+    A pytest fixture that adds multiple tenants to the database in a specific lodge.
     """
-    pass
+    max_tenants = 10
+    db_tenants = []
+    for i in range(max_tenants):
+        t_schema = tenant_schema_factory(
+            first_name=f'TenantFirst{i + 1}',
+            last_name=f'TenantLast{i + 1}',
+            email=f'tenant{i + 1}@test.com',
+            lodge_id=add_lodge_to_db.id
+        )
+        new_tenant = tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
+        db_tenants.append(new_tenant)
+
+    return db_tenants
 
 @pytest.fixture
 def add_tenant_to_db(test_db, mock_tenant_schema, add_lodge_to_db):
@@ -320,4 +351,64 @@ def authenticated_tenant_client(auth_client_factory, add_tenant_to_db):
     """
     A pytest fixture that provides an authenticated client for a tenant.
     """
-    return auth_client_factory(user_id=add_tenant_to_db.user_id)
+    tenant = add_tenant_to_db
+    client = auth_client_factory(user_id=tenant.user_id)
+    client.tenant = tenant
+    return client
+
+@pytest.fixture
+def add_second_tenant_to_db(test_db, tenant_schema_factory, add_lodge_to_db):
+    """
+    A pytest fixture that adds a second tenant to the same lodge.
+    """
+    t_schema = tenant_schema_factory(email="tenant2@test.com", first_name="TenantB")
+    return tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
+
+@pytest.fixture
+def add_diff_landlord_tenant(test_db, tenant_schema_factory, add_diff_landlord_lodge):
+    """
+    A pytest fixture that adds a tenant to a different landlord's lodge.
+    """
+    t_schema = tenant_schema_factory(lodge_id=add_diff_landlord_lodge.id, email="tenant3@test.com")
+    return tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
+
+@pytest.fixture
+def lease_schema_factory(add_tenant_to_db, add_room_to_db):
+    """
+    A pytest fixture that provides a factory for creating LeaseCreate schemas.
+    """
+    def _create(
+        tenant_id: int = add_tenant_to_db.id,
+        room_id: int = add_room_to_db.id,
+        agreed_rent_amt: int = 210000,
+        total_amt_paid: int = 105000,
+        start_date: date = date.today(),
+        end_date: date = date.today() + timedelta(days=365)
+    ):
+        return schema_lease.LeaseCreate(
+            tenant_id=tenant_id,
+            room_id=room_id,
+            agreed_rent_amt=agreed_rent_amt,
+            total_amt_paid=total_amt_paid,
+            start_date=start_date,
+            end_date=end_date
+        )
+    return _create
+
+@pytest.fixture
+def mock_lease_schema(lease_schema_factory):
+    """
+    A pytest fixture that provides a mock lease schema using the lease_schema_factory.
+    """
+    return lease_schema_factory()
+
+@pytest.fixture
+def add_active_lease_to_db_direct(test_db, mock_lease_schema, add_landlord_to_db):
+    """
+    Fixture to create and add an active lease to the database directly via the service.
+    """
+    return lease_services.create_new_lease(
+        db=test_db,
+        lease_data=mock_lease_schema,
+        landlord_user=add_landlord_to_db
+    )

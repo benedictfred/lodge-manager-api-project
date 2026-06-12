@@ -118,7 +118,9 @@ def test_register_tenant_lodge_not_exist_returns_404(client, mock_tenant_schema)
     """
     Tests that registering a tenant for a non-existent lodge returns a 404 status code.
     """
+    mock_tenant_schema.tenant_info.lodge_id = 999
     t_payload = mock_tenant_schema.model_dump()
+
 
     response = client.post(f'{auth_url_base}/register/tenant', json=t_payload)
     data = response.json()
