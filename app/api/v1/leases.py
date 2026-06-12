@@ -1,5 +1,4 @@
 from app.core.enums import LeaseStatus
-from app.crud.lease import crud_lease
 from app.schemas import lease as schema_lease
 from typing import List, Optional
 from fastapi import APIRouter, Depends
@@ -33,7 +32,7 @@ def get_leases_for_landlord(
         room_id: Optional[int] = None,
         tenant_id: Optional[int] = None,
         skip: Optional[int] = None,
-        max_limit: Optional[int] = None,
+        limit: Optional[int] = None,
         status: Optional[LeaseStatus] = None,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_landlord_user)
@@ -47,11 +46,10 @@ def get_leases_for_landlord(
         tenant_id=tenant_id,
         room_id=room_id,
         skip=skip,
-        max_limit=max_limit,
+        max_limit=limit,
         status=status
 
         )
-
 
 
 

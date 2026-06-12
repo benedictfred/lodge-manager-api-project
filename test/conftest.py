@@ -7,7 +7,7 @@ from datetime import date, timedelta
 
 from app.api.deps import get_db
 from app.core import security
-from app.core.enums import StudentLevel, TenantType, RoomStatus
+from app.core.enums import StudentLevel, TenantType, RoomStatus, LeaseStatus
 from app.main import app
 from app.db.session import Base
 from fastapi.testclient import TestClient
@@ -284,12 +284,12 @@ def lodges_in_db(test_db, add_landlord_to_db, lodge_schema_factory):
     return db_lodges
 
 @pytest.fixture
-def rooms_in_lodge(test_db,room_schema_factory, add_landlord_to_db, add_lodge_to_db):
+def rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, add_lodge_to_db):
     """
     A pytest fixture that adds multiple rooms to a lodge in the database.
     """
     max_rooms = 50
-    rooms_in_db = []
+    db_rooms = []
     for i in range(max_rooms):
         rm_schema = room_schema_factory(
             room_no=f'Test rm{i + 1}',
@@ -299,9 +299,9 @@ def rooms_in_lodge(test_db,room_schema_factory, add_landlord_to_db, add_lodge_to
             lodge_id=add_lodge_to_db.id
         )
         new_room = room_service.create_room_for_lodge(test_db, landlord_id=add_landlord_to_db.id, room_in=rm_schema)
-        rooms_in_db.append(new_room)
-
-    return rooms_in_db
+        db_rooms.append(new_room)
+    print(f"\n--- Fixture: rooms_in_ created {len(db_rooms)} tenants. First ID: {db_rooms[0].id}, Last ID: {db_rooms[-1].id} ---")
+    return db_rooms
 
 @pytest.fixture
 def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db):
@@ -319,7 +319,7 @@ def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db):
         )
         new_tenant = tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
         db_tenants.append(new_tenant)
-
+    print(f"\n--- Fixture: tenants_in_db created {len(db_tenants)} tenants. First ID: {db_tenants[0].id}, Last ID: {db_tenants[-1].id} ---")
     return db_tenants
 
 @pytest.fixture
@@ -383,7 +383,8 @@ def lease_schema_factory(add_tenant_to_db, add_room_to_db):
         agreed_rent_amt: int = 210000,
         total_amt_paid: int = 105000,
         start_date: date = date.today(),
-        end_date: date = date.today() + timedelta(days=365)
+        end_date: date = date.today() + timedelta(days=365),
+        status: LeaseStatus = LeaseStatus.ACTIVE
     ):
         return schema_lease.LeaseCreate(
             tenant_id=tenant_id,
@@ -391,7 +392,8 @@ def lease_schema_factory(add_tenant_to_db, add_room_to_db):
             agreed_rent_amt=agreed_rent_amt,
             total_amt_paid=total_amt_paid,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            status=status
         )
     return _create
 
@@ -412,3 +414,38 @@ def add_active_lease_to_db_direct(test_db, mock_lease_schema, add_landlord_to_db
         lease_data=mock_lease_schema,
         landlord_user=add_landlord_to_db
     )
+
+@pytest.fixture
+def leases_in_db(test_db, lease_schema_factory, add_landlord_to_db, tenants_in_db, rooms_in_db):
+    """
+    A pytest fixture that adds multiple leases to the database.
+    It creates a mix of ACTIVE and INACTIVE leases.
+    """
+    db_leases = []
+    # Ensure we have enough rooms and tenants for leases
+    num_leases_to_create = min(len(tenants_in_db), len(rooms_in_db), 15) # Limit to 15 or fewer
+
+    for i in range(num_leases_to_create):
+        tenant = tenants_in_db[i]
+        room = rooms_in_db[i]
+        
+        # Make every 3rd lease INACTIVE for testing status filters
+        status = LeaseStatus.EXPIRED if i % 3 == 0 else LeaseStatus.ACTIVE
+
+        lease_data = lease_schema_factory(
+            tenant_id=tenant.id,
+            room_id=room.id,
+            agreed_rent_amt=room.base_rent_price,
+            start_date=date.today() - timedelta(days=random.randint(1, 365)), # Random start date
+            end_date=date.today() + timedelta(days=random.randint(1, 365)), # Random end date
+            status=status
+        )
+        new_lease = lease_services.create_new_lease(
+            db=test_db,
+            lease_data=lease_data,
+            landlord_user=add_landlord_to_db
+        )
+        db_leases.append(new_lease)
+    print(
+        f"\n--- Fixture: leases_in_db created {len(db_leases)} tenants. First ID: {db_leases[0].id}, Last ID: {db_leases[-1].id} ---")
+    return db_leases

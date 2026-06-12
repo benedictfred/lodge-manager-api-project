@@ -117,7 +117,7 @@ def test_tenant_update_room_by_id_returns_403(authenticated_tenant_client, add_r
     assert data['detail'] == 'Only landlords are allowed.'
 
 
-def test_landlord_get_rooms_returns_200(authenticated_landlord_client, rooms_in_lodge):
+def test_landlord_get_rooms_returns_200(authenticated_landlord_client, rooms_in_db):
     """
     Tests that a landlord can get a list of rooms and returns a 200 status code.
     """
@@ -125,10 +125,10 @@ def test_landlord_get_rooms_returns_200(authenticated_landlord_client, rooms_in_
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(data) == len(rooms_in_lodge)
+    assert len(data) == len(rooms_in_db)
 
 
-def test_get_rooms_pagination_limit(authenticated_landlord_client, rooms_in_lodge):
+def test_get_rooms_pagination_limit(authenticated_landlord_client, rooms_in_db):
     """Verifies that the limit parameter restricts the number of returned items."""
     response = authenticated_landlord_client.get(f'{room_url}?limit=2')
     data = response.json()
@@ -137,19 +137,19 @@ def test_get_rooms_pagination_limit(authenticated_landlord_client, rooms_in_lodg
     assert len(data) == 2
 
 
-def test_get_rooms_pagination_skip(authenticated_landlord_client, rooms_in_lodge):
+def test_get_rooms_pagination_skip(authenticated_landlord_client, rooms_in_db):
     """Verifies that the skip parameter correctly offsets the returned items."""
     response = authenticated_landlord_client.get(f'{room_url}?skip=2&limit=1')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
     assert len(data) == 1
-    assert data[0]['room_no'] == rooms_in_lodge[2].room_no
+    assert data[0]['room_no'] == rooms_in_db[2].room_no
 
 
-def test_get_rooms_pagination_skip_exceeds_total(authenticated_landlord_client, rooms_in_lodge):
+def test_get_rooms_pagination_skip_exceeds_total(authenticated_landlord_client, rooms_in_db):
     """Verifies that skipping more items than exist returns an empty list."""
-    total_rooms = len(rooms_in_lodge)
+    total_rooms = len(rooms_in_db)
     response = authenticated_landlord_client.get(f'{room_url}?skip={total_rooms + 5}')
     data = response.json()
 

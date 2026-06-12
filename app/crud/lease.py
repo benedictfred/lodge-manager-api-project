@@ -19,8 +19,8 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
             tenant_id: Optional[int] = None,
             room_id: Optional[int] = None,
             status: Optional[LeaseStatus] = None,
-            skip: int = 0,
-            max_limit: int = 50
+            skip: Optional[int] = None,
+            max_limit: Optional[int] = None
     ) -> list[Lease]:
 
         # 1. Initialize the statement

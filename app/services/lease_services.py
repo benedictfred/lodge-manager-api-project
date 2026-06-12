@@ -45,10 +45,7 @@ def get_filtered_landlord_leases(
         max_limit: Optional[int] = None,
         status: Optional[LeaseStatus] = None
 ):
-    lodge = lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_id)
-
-    if not lodge:
-        raise LodgeNotFoundError()
+    lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_id)
 
     return filter_leases(
         db,
