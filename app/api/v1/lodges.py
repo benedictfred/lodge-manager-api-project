@@ -1,15 +1,13 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_landlord_user
 from app.schemas import lodge as lodge_schema
-from app.api.deps import get_current_user
 from app.schemas import tenantprofile as schema_tenant
 from app.models.user import User
 from app.crud.lodge import crud_lodge
 from app.services import lodge_service, tenant_services
-from app.core.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
 
 router = APIRouter()
 
@@ -20,17 +18,12 @@ def register_lodge(
         landlord_user: User = Depends(get_landlord_user)
 
 ):
-    try:
-        return lodge_service.create_new_loge_for_landlord(
-            db=db,
-            landlord_id=landlord_user.id,
-            lodge_in=lodge_in
-        )
-    except LodgeAlreadyExistError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error)
-        )
+
+    return lodge_service.create_new_lodge_for_landlord(
+        db=db,
+        landlord_id=landlord_user.id,
+        lodge_in=lodge_in
+    )
 
 
 
@@ -40,14 +33,9 @@ def get_lodge_by_id(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
-    try:
-        return lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=landlord_user.id)
 
-    except LodgeNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail = str(error)
-        )
+    return lodge_service.verify_lodge_ownership(db=db, lodge_id=lodge_id, landlord_id=landlord_user.id)
+
 
 @router.get('/', response_model=List[lodge_schema.LodgeResponse])
 def get_lodges_by_landlord(
@@ -68,19 +56,15 @@ def get_lodge_tenants(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
-    try:
-        return tenant_services.fetch_lodge_tenants(
-            db,
-            lodge_id=lodge_id,
-            landlord_user=landlord_user,
-            skip=skip,
-            limit=limit
-        )
-    except LodgeNotFoundError as e:
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
+
+    return tenant_services.fetch_lodge_tenants(
+        db,
+        lodge_id=lodge_id,
+        landlord_user=landlord_user,
+        skip=skip,
+        limit=limit
+    )
+
 
 @router.patch('/{lodge_id}', response_model=lodge_schema.LodgeResponse)
 def update_lodge_details(
@@ -89,18 +73,12 @@ def update_lodge_details(
         landlord_user: User = Depends(get_landlord_user),
         db: Session = Depends(get_db)
 ):
-    try:
-        return lodge_service.update_landlord_lodge(
-            db=db, lodge_id=lodge_id,
-            landlord_id=landlord_user.id,
-            update_data=update_data
-        )
+    return lodge_service.update_landlord_lodge(
+        db=db, lodge_id=lodge_id,
+        landlord_id=landlord_user.id,
+        update_data=update_data
+    )
 
-    except LodgeNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(error)
-        )
 
 
 

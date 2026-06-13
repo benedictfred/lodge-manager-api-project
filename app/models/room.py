@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+from datetime import datetime
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy import func
@@ -7,6 +9,8 @@ from app.core.enums import RoomStatus
 
 from typing import TYPE_CHECKING
 
+from app.schemas.room import RoomGridSummary
+
 if TYPE_CHECKING:
     from app.models.lodge import Lodge
     from app.models.lease import Lease
@@ -15,19 +19,19 @@ if TYPE_CHECKING:
 class Room(Base):
     __tablename__ = 'rooms'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    lodge_id: Mapped[int] = mapped_column(Integer, ForeignKey('lodges.id', ondelete='CASCADE'))
-    room_no: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lodge_id: Mapped[int] = mapped_column(ForeignKey('lodges.id', ondelete='CASCADE'))
+    room_no: Mapped[str] = mapped_column(index=True, nullable=False)
     description: Mapped[str] = mapped_column(String(300))
-    base_rent_price: Mapped[int] = mapped_column(Integer, nullable=False, default=200000)
+    base_rent_price: Mapped[int] = mapped_column(nullable=False, default=200000)
     status: Mapped["RoomStatus"] = mapped_column(Enum(RoomStatus), default=RoomStatus.VACANT, nullable=False)
-    created_at: Mapped['DateTime'] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False
     )
-    leases: Mapped["Lease"] = relationship('Lease', back_populates='room', )
-    lodge: Mapped["Lodge"] = relationship("Lodge", back_populates='rooms')
+    leases: Mapped["Lease"] = relationship( back_populates='room')
+    lodge: Mapped["Lodge"] = relationship( back_populates='rooms')
 
     __table_args__ = (
         UniqueConstraint(
@@ -36,13 +40,11 @@ class Room(Base):
             name='lodge_room_uc'
         ),)
 
-
+@dataclass
 class RoomFilter:
-    def __init__(self):
-        self.safe = []
-        self.expiring = []
-        self.overdue = []
-        self.owing = []
-        self.vacant = []
-        self.maintenance = []
-
+    safe: list[RoomGridSummary] = field(default_factory=list)
+    expiring:  list[RoomGridSummary] = field(default_factory=list)
+    overdue: list[RoomGridSummary] = field(default_factory=list)
+    owing: list[RoomGridSummary] = field(default_factory=list)
+    vacant: list[RoomGridSummary] = field(default_factory=list)
+    maintenance: list[RoomGridSummary] = field(default_factory=list)

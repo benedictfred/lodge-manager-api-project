@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, Union
-
 from app.core.enums import BadgeTexts, BadgeVariants
-from app.models.room import RoomStatus
+from app.core.enums import  RoomStatus
 from datetime import datetime
 
 
@@ -10,7 +9,7 @@ class RoomBase(BaseModel):
     room_no: str
     description: Optional[str] = None
     base_rent_price: int = Field(default=200000, ge=0)
-    status: RoomStatus = RoomStatus.VACANT
+    status: RoomStatus
 
     @field_validator('room_no', 'description')
     @classmethod
@@ -19,18 +18,18 @@ class RoomBase(BaseModel):
 
 
 class RoomCreate(RoomBase):
+    lodge_id: int
     pass
 
 
-class RoomResponse(RoomBase):
+class RoomResponse(RoomCreate):
     id: int
-    lodge_id: int
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class RoomStatusCount(BaseModel):
+class RoomStatusCounts(BaseModel):
     occupied: int
     vacant: int
     maintenance: int
@@ -52,3 +51,18 @@ class RoomGridSummary(BaseModel):
     badge_variant: BadgeVariants
     main_display_text: str
     sub_display_text: str
+
+
+if __name__ == '__main__':
+
+    summary_dict = {
+        'lease_id': 1,
+        'room_no': '29',
+        'badge_text': BadgeTexts.SAFE,
+        'badge_variant': BadgeVariants.SUCCESS,
+        'main_display_text': 'Donald',
+        'sub_display_text': '91 days left'
+    }
+
+    print(RoomGridSummary.model_validate(summary_dict).model_dump_json(indent=4))
+

@@ -38,11 +38,11 @@ def add_payment_record(
     if lease.status != LeaseStatus.ACTIVE:
         raise InvalidLeaseActionError(status=lease.status)
 
-    total_payments = crud_payment.get_payments_aggregate_by_lease_id(db, lease_id=lease.id) or 0
+    total_payments = crud_payment.get_payments_aggregate_by_lease_id(db, lease_id=lease.id)
 
     if not can_add_payment(total_payments=total_payments, incoming_amt=payment_data.amount_paid,
                            agreed_amt=lease.agreed_rent_amt):
-        print(f'total_payment: {total_payments} ')
+
         raise RentAmtExceededError(
             attempted=payment_data.amount_paid,
             current_total=total_payments,
@@ -56,8 +56,8 @@ def fetch_payments_by_lease(
         db: Session,
         lease_id: int,
         landlord_id: int,
-        skip: Optional[int],
-        limit: Optional[int]
+        skip: Optional[int] = None,
+        limit: Optional[int] = None
 ):
     lease = crud_lease.get(db, item_id=lease_id)
 

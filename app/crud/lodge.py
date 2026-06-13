@@ -1,15 +1,13 @@
-from sqlalchemy import or_, literal, func, select, and_
+from sqlalchemy import or_, literal, func, select, and_, case
 from sqlalchemy.orm import Session
-
-from app.core.enums import RoomStatus
-from app.crud.payment import crud_payment
+from app.core.enums import RoomStatus, LeaseStatus, BadgeTexts
 from app.models.lease import Lease
 from app.models.lodge import Lodge
 from app.models.room import Room
 from app.models.tenantprofile import TenantProfile
-from app.schemas.entity_count import EntityCountResponse
 from app.schemas.lodge import LodgeCreate, LodgeUpdate
 from app.crud.base_crud import CRUDBase
+from app.core import constants as const
 
 
 class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
@@ -36,62 +34,78 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             self.model.landlord_id == landlord_id
         ).offset(skip).limit(limit).all()
 
-    def get_all_entities_count(self, db: Session, lodge_id: int):
-        payment_subq = crud_payment.get_payment_subq()
+    def get_room_status_counts(self, db: Session, lodge_id: int):
+        occupied_count_expr = func.count(case((const.occupied_expr, 1), else_=None))
 
-        days_left = Lease.end_date - func.current_date()
-        has_payed = func.sum(payment_subq.c.total_paid) == Lease.agreed_rent_amt
-        not_payed = func.sum(payment_subq.c.total_paid) < Lease.agreed_rent_amt
+        vacant_count_expr = func.count(case((const.vacant_expr, 1), else_=None))
 
-        SAFE_DAYS = 90
-        EXPIRING_DAYS_START = 30
-        EXPIRING_DAYS_END = 0
-
-
-        room_count_scalar_subq = select(func.count(Room.id)).scalar_subquery()
-        tenant_count_scalar_subq = select(func.count(TenantProfile.id).label('tenant_count')).scalar_subquery()
-        vacant_count_scalar_subq = select(func.count(Room.status == RoomStatus.VACANT).label('vacant')).scalar_subquery()
-        maintenance_count_scalar_subq = select(func.count(Room.status == RoomStatus.MAINTENANCE).label('maintenance')).scalar_subquery()
-        occupied_count_scalar_subq = select(func.count(Room.status == RoomStatus.OCCUPIED).label('occupied')).scalar_subquery()
-        safe_count_scalar_subq = select(func.count(
-            and_(Room.status == RoomStatus.OCCUPIED, days_left >= SAFE_DAYS, has_payed)
-        ).label('safe')).scalar_subquery()
-
-        expiring_count_scalar_subq = select(func.count(
-            and_(Room.status == RoomStatus.OCCUPIED, days_left <= EXPIRING_DAYS_START, days_left >= EXPIRING_DAYS_END,
-                 has_payed)
-        ).label('expiring')).scalar_subquery()
-
-        overdue_count_scalar_subq = select(func.count(
-            and_(Room.status == RoomStatus.OCCUPIED, days_left < EXPIRING_DAYS_END, has_payed)
-        ).label('overdue')).scalar_subquery()
-
-        owing_count_scalar_subq = select(func.count(
-            and_(Room.status == RoomStatus.OCCUPIED, not_payed)
-        ).label('owing')).scalar_subquery()
+        maintenance_count_expr = func.count(case((const.maintenance_expr, 1), else_=None))
 
         stmt = select(
-            room_count_scalar_subq.label('room_count'),
-            tenant_count_scalar_subq,
-            vacant_count_scalar_subq,
-            maintenance_count_scalar_subq,
-            occupied_count_scalar_subq,
-            safe_count_scalar_subq,
-            expiring_count_scalar_subq,
-            overdue_count_scalar_subq,
-            owing_count_scalar_subq,
+            occupied_count_expr.label('occupied'),
+            vacant_count_expr.label('vacant'),
+            maintenance_count_expr.label('maintenance')
         ).where(
             Room.lodge_id == lodge_id
-        ).group_by(
-            Lease.end_date,
-            Lease.agreed_rent_amt,
-            Room.id,
-            TenantProfile.id,
-            Room.status,
         )
 
-        db_entity_count =   db.execute(stmt).mappings().first()
-        return  EntityCountResponse(**db_entity_count) if db_entity_count else None
+        result = db.execute(stmt).mappings().first()
+
+        return result
+
+    def get_tenant_counts(self, db: Session, lodge_id: int):
+        tenant_count_expr = func.count(TenantProfile.id)
+        stmt = select(tenant_count_expr.label('total_tenants')).where(TenantProfile.lodge_id == lodge_id)
+
+        result = db.execute(stmt).mappings().first()
+        return result
+
+    def get_occupied_counts(self, db: Session, lodge_id: int):
+
+
+        owing_count_expr = func.count(
+            case(
+                (and_(*const.filter_menu.get(BadgeTexts.OWING)), 1), else_=None
+            )
+        )
+
+
+        safe_count_expr = func.count(
+            case(
+                (and_(*const.filter_menu.get(BadgeTexts.SAFE)), 1), else_=None
+            )
+        )
+
+        expiring_count_expr = func.count(
+            case(
+                (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), 1), else_=None
+            )
+        )
+
+        overdue_expr = func.count(
+            case(
+                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), 1), else_=None
+            )
+        )
+
+        stmt = select(
+            safe_count_expr.label('safe'),
+            expiring_count_expr.label('expiring'),
+            overdue_expr.label('overdue'),
+            owing_count_expr.label('owing')
+        ).select_from(Lease).outerjoin(
+            Room, Lease.room_id == Room.id
+        ).outerjoin(
+            const.payment_subq, const.payment_subq.c.lease_id == Lease.id
+        ).where(
+            Room.lodge_id == lodge_id,
+            Lease.status == LeaseStatus.ACTIVE,
+            Room.status == RoomStatus.OCCUPIED
+        )
+
+        result = db.execute(stmt).mappings().first()
+        return result
+
 
 
 

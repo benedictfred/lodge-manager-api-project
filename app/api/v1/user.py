@@ -4,10 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.schemas import user as schema_user
 from app.schemas import tenantprofile as schema_tenant
-
-from app.services import user_service
-from app.services.tenant_services import sign_up_tenant
-from app.core.exceptions import UserAlreadyExistError
+from app.services import user_service, tenant_services
 
 router = APIRouter()
 
@@ -17,13 +14,8 @@ def register_landlord(
         landlord_in: schema_user.UserCreate,
         db: Session = Depends(get_db)
 ):
-    try:
-        return user_service.sign_up_landlord(db=db, landlord_data=landlord_in)
-    except UserAlreadyExistError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error)
-        )
+
+    return user_service.sign_up_landlord(db=db, landlord_data=landlord_in)
 
 
 @router.post('/register/tenant', response_model=schema_tenant.TenantProfileResponse, status_code=201)
@@ -32,7 +24,7 @@ def register_tenant(
         db: Session = Depends(get_db)
 ):
 
-    return sign_up_tenant(db=db, tenant_in=tenant_in)
+    return tenant_services.sign_up_tenant(db=db, tenant_in=tenant_in)
 
 
 

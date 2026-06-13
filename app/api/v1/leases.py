@@ -26,16 +26,13 @@ def create_new_lease(
 
 
 
-
-
-
 @router.get('/{lodge_id}', response_model=List[schema_lease.LeaseResponse])
 def get_leases_for_landlord(
         lodge_id: int,
         room_id: Optional[int] = None,
         tenant_id: Optional[int] = None,
         skip: Optional[int] = None,
-        max_limit: Optional[int] = None,
+        limit: Optional[int] = None,
         status: Optional[LeaseStatus] = None,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_landlord_user)
@@ -49,11 +46,10 @@ def get_leases_for_landlord(
         tenant_id=tenant_id,
         room_id=room_id,
         skip=skip,
-        max_limit=max_limit,
+        max_limit=limit,
         status=status
 
         )
-
 
 
 
@@ -68,9 +64,9 @@ def get_tenant_leases(
     #leases must belong to the tenant
     #leases can be filtered by active
 
-    return lease_services.filter_leases(
+    return lease_services.get_filtered_leases_tenant(
             db,
-            tenant_id=tenant_user.id,
+            tenant_profile=tenant_user.tenant_profile,
             skip=skip,
             max_limit=max_limit,
             status=status
@@ -79,26 +75,17 @@ def get_tenant_leases(
 
 
 
+@router.patch('/{lease_id}', response_model=schema_lease.LeaseResponse)
+def update_lease_by_id(
+        lease_id: int,
+        lease_data: schema_lease.LeaseUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_landlord_user)
+):
+    
+    return lease_services.update_lease_details(db, lease_id=lease_id, update_data=lease_data, landlord_id=current_user.id)
 
 
-# @router.patch('/{lease_id}', response_model=schema_lease.LeaseResponse)
-# def update_lease_by_id(
-#         lease_id: int,
-#         lease_data: schema_lease.LeaseUpdate,
-#         db: Session = Depends(get_db),
-#         current_user: LandLord = Depends(get_current_user)
-# ):
-#     lease = crud_lease.get_lease(db=db, lease_id=lease_id)
-#
-#     if not lease:
-#         raise HTTPException(
-#             status_code=404,
-#             detail='Lease not Found'
-#
-#         )
-#     return crud_lease.update_lease(db=db, lease_data=lease_data, db_lease=lease)
-#
-#
 @router.patch('/terminate/{lease_id}', response_model=schema_lease.LeaseResponse)
 def terminate_lease_by_id(
         lease_id: int,
@@ -108,7 +95,8 @@ def terminate_lease_by_id(
     #the landlord can only terminate leases in his specific lodge
     #the lease must exist
 
-    return lease_services.terminate_lease(db, lease_id=lease_id, landlord_id=current_user.id)
+    return lease_services.terminate_lease(db, lease_id=lease_id, landlord_id=current_user.id
+                                                                              )
 
 
 @router.patch('/me/terminate/{lease_id}', response_model=schema_lease.LeaseResponse)
@@ -122,7 +110,7 @@ def request_lease_termination(
     return lease_services.appeal_for_lease_termination(
         db,
         lease_id=lease_id,
-        tenant_id = current_tenant.tenantprofile.id
+        tenant_id = current_tenant.tenant_profile.id
     )
 
 

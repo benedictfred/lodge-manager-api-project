@@ -1,14 +1,16 @@
-from typing import Union
-from app.core.enums import RoomStatus, BadgeTexts, BadgeVariants
-from app.crud.payment import crud_payment
+from app.core.enums import BadgeVariants, LeaseStatus, BadgeTexts, RoomStatus
 from app.models.lease import Lease
+from app.models.lodge import Lodge
 from app.models.room import Room
 from app.models.tenantprofile import TenantProfile
 from app.models.user import User
-from app.schemas.room import RoomCreate, RoomUpdate, RoomGridSummary
+from app.schemas.dashboard import DashboardFilters
+from app.schemas.room import RoomCreate, RoomUpdate
 from sqlalchemy.orm import Session
 from app.crud.base_crud import CRUDBase
-from sqlalchemy import func, select, case, and_
+from sqlalchemy import select, case, and_,  func
+from app.core import constants as const
+from utilities.dashboard_utilities import apply_dashboard_filters
 
 
 class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
@@ -23,108 +25,91 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             self.model.room_no == room_no
         ).first()
 
-    def get_rooms(self, db: Session, lodge_id: int, skip: int = 0, max_limit: int = 50):
+    def get_rooms(self, db: Session, skip: int = 0, max_limit: int = 50):
         """Retrieve a list of rooms with pagination support."""
-        return db.query(self.model).filter(self.model.lodge_id == lodge_id).offset(skip).limit(max_limit).all()
+        stmt = select(self.model).join(Lodge).offset(skip).limit(limit=max_limit)
+        return db.execute(stmt).scalars().all()
+
 
     def get_dashboard_rooms(
             self,
-            filter_by:
-            Union[BadgeTexts, RoomStatus],
             db: Session,
+            filter_by: DashboardFilters,
             lodge_id: int,
             skip: int = 0,
             limit: int = 50
     ) :
 
-        payment_subq = crud_payment.get_payment_subq()
-
-        days_left = Lease.end_date - func.current_date()
-        has_payed = func.sum(payment_subq.c.total_paid) == Lease.agreed_rent_amt
-        not_payed = func.sum(payment_subq.c.total_paid) < Lease.agreed_rent_amt
-
         stmt = (select(
             Lease.id.label('lease_id'),
             Room.room_no.label('room_no'),
             case(
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 90, has_payed), BadgeTexts.SAFE),
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 0, has_payed), BadgeTexts.EXPIRING),
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left < 0, has_payed), BadgeTexts.OVERDUE),
-                (Room.status == RoomStatus.VACANT, RoomStatus.VACANT),
-                (Room.status == RoomStatus.MAINTENANCE, RoomStatus.MAINTENANCE),
-                else_=BadgeTexts.OWING
+                (and_(*const.filter_menu.get(BadgeTexts.SAFE)), BadgeTexts.SAFE),
+                (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeTexts.EXPIRING),
+                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeTexts.OVERDUE),
+                (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeTexts.OWING),
+                (const.vacant_expr, RoomStatus.VACANT),
+                (const.maintenance_expr, RoomStatus.MAINTENANCE),
+                else_='Unknown_badge_text'
             ).label('badge_text'),
 
             case(
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 90, has_payed), BadgeVariants.SUCCESS),
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left >= 0, has_payed), BadgeVariants.WARNING),
-                (and_(Room.status == RoomStatus.OCCUPIED, days_left < 0, has_payed), BadgeVariants.DANGER),
-                (Room.status == RoomStatus.VACANT, BadgeVariants.INACTIVE),
-                (Room.status == RoomStatus.MAINTENANCE, BadgeVariants.NEED_REPAIR),
-                else_=BadgeVariants.INFO
-            ).label('badge_variants'),
+                (and_(*const.filter_menu.get(BadgeTexts.SAFE)), BadgeVariants.SUCCESS),
+                (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeVariants.WARNING),
+                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeVariants.DANGER),
+                (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeVariants.INFO),
+                (const.vacant_expr, BadgeVariants.INACTIVE),
+                (const.maintenance_expr, BadgeVariants.NEED_REPAIR),
+                else_= 'Unknown_variant'
+            ).label('badge_variant'),
 
             case(
-                (Room.status == RoomStatus.OCCUPIED, func.concat(User.first_name, User.last_name, 'full name')),
-                (Room.status == RoomStatus.VACANT, 'Ready to Lease'),
-                (Room.status == RoomStatus.MAINTENANCE, 'Unavailable'),
+                (const.occupied_expr, func.concat(User.first_name, ' ', User.last_name, )),
+                (const.vacant_expr, 'Ready to Lease'),
+                (const.maintenance_expr, 'Unavailable'),
                 else_='Invalid'
             ).label('main_display_text'),
 
             case(
-                (Room.status == RoomStatus.OCCUPIED, func.concat(days_left, 'days left')),
-                (Room.status == RoomStatus.VACANT, 'Available'),
-                (Room.status == RoomStatus.MAINTENANCE, 'Under Maintenance'),
+                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)),
+                    func.concat(func.abs(const.days_left, ), 'days overdue')
+                ),
+                (const.occupied_expr, func.concat(const.days_left, 'days left')),
+                (const.vacant_expr, 'Available'),
+                (const.maintenance_expr, 'Under Maintenance'),
                 else_='Invalid'
             ).label('sub_display_text'),
 
         ).select_from(
             Room
         ).outerjoin(
-            Lease, Lease.room_id == Room.id
+            Lease, and_(Lease.room_id == Room.id, Lease.status == LeaseStatus.ACTIVE)
         ).outerjoin(
             TenantProfile, Lease.tenant_id == TenantProfile.id
         ).outerjoin(
             User, TenantProfile.user_id == User.id
         ).outerjoin(
-            payment_subq, payment_subq.c.lease_id == Lease.id
+            const.payment_subq, const.payment_subq.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id
         ).group_by(
             Lease.id,
-            Room.room_no,
-            Lease.end_date,
-            Lease.agreed_rent_amt,
-            Room.status,
             User.first_name,
-            User.last_name
+            User.last_name,
+            Room.room_no,
+            Lease.agreed_rent_amt,
+            Lease.end_date,
+            Room.status,
+
         ))
 
+        #if filters dict is empty, fetch the list of categorized rooms with pagination support
+        #otherwise only fetch the list of room categories that match the provided filters
+        filtered_stmt = apply_dashboard_filters(filter_by=filter_by, filters=const.filter_menu, stmt=stmt)
 
-        if filter_by == BadgeTexts.SAFE:
-            stmt = stmt.where((Room.status == RoomStatus.OCCUPIED)).having(has_payed, days_left >= 90)
+        stmt = filtered_stmt.offset(skip).limit(limit)
 
-        elif filter_by == BadgeTexts.EXPIRING:
-            stmt = stmt.where((Room.status == RoomStatus.OCCUPIED)).having(has_payed, days_left >= 0)
-
-        elif filter_by == BadgeTexts.OVERDUE:
-            stmt = stmt.where((Room.status == RoomStatus.OCCUPIED)).having(has_payed, days_left < 0)
-
-        elif filter_by == RoomStatus.VACANT:
-            stmt = stmt.where((Room.status == RoomStatus.VACANT))
-
-        elif filter_by == RoomStatus.MAINTENANCE:
-            stmt = stmt.where((Room.status == RoomStatus.MAINTENANCE))
-
-        elif filter_by == BadgeTexts.OWING:
-            stmt = stmt.where((Room.status == RoomStatus.OCCUPIED)).having(not_payed)
-
-        stmt = stmt.offset(skip).limit(limit)
-
-        db_rooms = db.execute(stmt).mappings().all()
-        rooms_summary = [RoomGridSummary(**row) for row in db_rooms]
-
-        return rooms_summary
+        return db.execute(stmt).mappings().all()
 
 
 crud_room = CRUDRoom(Room)

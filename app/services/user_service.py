@@ -4,13 +4,14 @@ from app.crud.user import crud_user
 from app.core.enums import UserRole
 from app.core.exceptions import UserAlreadyExistError, UnauthorizedAccessError
 from app.core.security import verify_password_hash, get_password_hash, create_access_token
+from app.models.user import User
 from app.schemas.user import UserCreate, UserInternal
 
 
 def sign_up_landlord(
         db: Session,
         landlord_data: UserCreate,
-):
+)-> User:
     user = crud_user.get_user_by_email(db, email=landlord_data.email)
 
     if user:

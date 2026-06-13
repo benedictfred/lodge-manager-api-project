@@ -1,15 +1,14 @@
-from sqlalchemy import select, Select
 from typing import Optional
 from sqlalchemy.orm import Session
-
 from app.core.enums import LeaseStatus
 from app.models.payment import Payment
 from app.models.room import RoomStatus, Room
+from app.models.tenantprofile import TenantProfile
 from app.schemas.lease import LeaseCreate, LeaseUpdate
 from app.models.lease import Lease
 from app.crud.base_crud import CRUDBase
 from datetime import datetime
-
+from sqlalchemy import select
 
 class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
 
@@ -20,27 +19,23 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
             tenant_id: Optional[int] = None,
             room_id: Optional[int] = None,
             status: Optional[LeaseStatus] = None,
-            skip: int = 0,
-            max_limit: int = 50
+            skip: Optional[int] = None,
+            max_limit: Optional[int] = None
     ) -> list[Lease]:
 
         # 1. Initialize the statement
-        stmt: Select = select(self.model)
-
-        if lodge_id:
-            stmt = stmt.join(Room).where(lodge_id=lodge_id)
-
+        stmt = select(Lease).select_from(Lease).join(TenantProfile).join(Room)
 
         if tenant_id:
-            stmt = stmt.filter_by(tenant_id=tenant_id)
+            stmt = stmt.where(TenantProfile.id == tenant_id)
 
         if room_id:
-            stmt = stmt.filter_by(room_id=room_id)
+            stmt = stmt.where(Room.id == room_id)
 
         if status:
-            stmt = stmt.filter_by(status=status)
+            stmt = stmt.where(Lease.status == status)
 
-        stmt = stmt.offset(skip).limit(max_limit)
+        stmt = stmt.where(Room.lodge_id == lodge_id).offset(skip).limit(max_limit)
 
         # 4. Execute
         result = db.execute(stmt)
@@ -96,7 +91,10 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
 
     def update_lease(self, db: Session, lease_data: LeaseUpdate, db_lease: Lease) -> Lease:
         update_data = lease_data.model_dump(exclude_unset=True)
-
+        #if the update_data is trying to update the lease status, make the lease's room occupied
+        if lease_data.status:
+            db_lease.room.status  =  RoomStatus.OCCUPIED
+            
         for k, v in update_data.items():
             setattr(db_lease, k, v)
 

@@ -1,25 +1,41 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_landlord_user
-from app.models.user import User
-from app.schemas import user as schema_user
-from app.schemas import tenantprofile as schema_tenant
-from app.schemas.dashboard import LandlordDashboardStats
 
-from app.services import user_service
-from app.services.tenant_services import sign_up_tenant
-from app.core.exceptions import UserAlreadyExistError
+from fastapi import APIRouter, Depends
+from fastapi.params import Query
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_landlord_user, get_db
+from app.core.enums import RoomStatus, BadgeTexts
+from app.models.user import User
+from app.schemas import dashboard as schema_dashboard
+from app.schemas.dashboard import DashboardFilters
+from app.services import dashboard_service
 
 
 router = APIRouter()
 
 
-@router.get('/me/landlord/{lodge_id}', response_model=LandlordDashboardStats)
+
+
+@router.get('/me/landlord/{lodge_id}', response_model=schema_dashboard.LandlordDashboardStats)
 def get_landlord_dashboard(
         lodge_id: int,
-        landlord_user: User = Depends(get_landlord_user)
-):
-    #does the lodge exist and is owned by the landlord??
+        room_statuses: list[RoomStatus] = Query(default=[]),
+        financial_filters: list[BadgeTexts] = Query(default=[]),
+        skip: int | None = None,
+        limit: int | None = None,
+        db: Session = Depends(get_db),
+        landlord_user: User = Depends(get_landlord_user),
 
-    pass
+):
+    #goal: to get a list of landlord dashboard stats with
+    #financial summary, total entities count, dictionary of dashboard rooms categories
+    # that match a specific filter and is paginated
+    #does the lodge exist and is owned by the landlord??
+    all_filters = DashboardFilters(
+        room_status_filters= room_statuses,
+        financial_filters=financial_filters
+    )
+    return dashboard_service.get_landlord_dashboard(
+        db, lodge_id=lodge_id,skip=skip,limit=limit,
+        filter_by=all_filters, landlord_id=landlord_user.id
+    )

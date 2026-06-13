@@ -12,10 +12,15 @@ from app.core.handlers import lodge_ops_handlers
 from app.api.v1.dashboards.landlord_dashboard import router as landlord_dashboard_router
 app = FastAPI(title=settings.PROJECT_NAME, exception_handlers=lodge_ops_handlers)
 
+# Explicitly list the allowed origins instead of using '*'
+origins = [
+    "http://localhost:5173", # Default for Vite React apps
+    "http://localhost:3000", # Default for Create React App
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],  #for local development only
+    allow_origins=origins,  
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*']
@@ -36,7 +41,7 @@ app.include_router(payment_router, prefix='/api/v1/payments', tags=['Payments'])
 
 
 app.include_router(landlord_dashboard_router, prefix='/api/v1/dashboard', tags=['Dashboards'])
-@app.get("/")
+@app.get("/healthy")
 def health_status():
     return {"message": f"Your {settings.PROJECT_NAME} is working well"}
 

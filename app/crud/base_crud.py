@@ -20,7 +20,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def get_multi(self, db: Session, item_id: int, skip: int = 0, limit: int = 100) -> List[ModelType]:
         return db.query(self.model).filter(self.model.id == item_id).offset(skip).limit(limit).all()
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs: Unpack[GenericExtras]) -> ModelType:
+    def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs: Unpack[GenericExtras]):
         db_object = self.model(**obj_in.model_dump(), **kwargs)
         db.add(db_object)
         db.commit()

@@ -1,15 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
-from app.core.exceptions import UserNotFoundError
 from app.schemas import tenantprofile as schema_tenant
 from app.crud.tenantprofile import crud_tenant
-from typing import List
 from app.api.deps import get_db, get_current_user, get_landlord_user, get_tenant_user
 from app.models.user import User
 from app.services import tenant_services
 
 router = APIRouter()
+
+
 
 
 @router.patch('/profiles/me', response_model=schema_tenant.TenantProfileResponse)
@@ -31,11 +30,6 @@ def update_tenant_profile(
 def get_tenant_by_id(
         current_user=Depends(get_tenant_user)
 ):
-    #can be done by either landlord or tenant
-    #if landlord -> does tenant exist and in the same lodge??
-    #if tenant-> use the tenant_user obj instead (a user obj)
-
-
      return tenant_services.fetch_tenant(current_user=current_user)
 
 
@@ -45,7 +39,7 @@ def get_tenant_by_id(
 def get_tenant_by_landlord(
         tenant_id: int,
         db: Session = Depends(get_db),
-        current_user=Depends(get_landlord_user)
+        current_user: User =Depends(get_landlord_user)
 
 ):
 

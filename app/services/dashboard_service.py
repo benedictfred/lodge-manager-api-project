@@ -5,25 +5,26 @@ from app.models.room import RoomFilter
 from sqlalchemy.orm import Session
 from app.core.enums import BadgeTexts
 from app.crud.payment import crud_payment
-from app.schemas.dashboard import LandlordDashboardStats
-from app.schemas.entity_count import EntityCountResponse
+from app.schemas.dashboard import LandlordDashboardStats, DashboardFilters
+from app.schemas.entity_count import EntityCountResponse, OccupiedCounts
 from app.schemas.financial import FinancialResponse
 from app.schemas.lease import OccupiedRoomLeasesResponse
 from app.crud.room import crud_room
+from app.schemas.room import RoomStatusCounts, RoomGridSummary
 from app.services import lodge_service
 from typing import Union
 from app.core.enums import RoomStatus
 
 
-def get_financial_summary(db: Session, lodge_id: int):
-    potential_revenue = crud_payment.get_potential_income_from_rooms(db, lodge_id=lodge_id) or 0
-    active_lease_financials = crud_payment.get_financials_for_active_leases(db, lodge_id=lodge_id)
-    unpaid_rent = crud_payment.get_total_unpaid_rent(db, lodge_id=lodge_id) or 0
+def get_financial_summary(db: Session, lodge_id: int, filter_by: DashboardFilters):
+    potential_revenue = crud_payment.get_potential_income_from_rooms(db, lodge_id=lodge_id)
+    active_lease_financials = crud_payment.get_financials_for_active_leases(db, lodge_id=lodge_id, filter_by=filter_by)
+    unpaid_rent = crud_payment.get_total_unpaid_rent(db, lodge_id=lodge_id, filter_by=filter_by)
 
     return FinancialResponse(
         potential_revenue=potential_revenue,
-        expected_revenue=dict(active_lease_financials).get('expected_revenue') or 0,
-        collected_revenue=dict(active_lease_financials).get('collected_revenue') or 0,
+        expected_revenue= active_lease_financials.get('expected_revenue'),
+        collected_revenue=active_lease_financials.get('collected_revenue'),
         unpaid_rent=unpaid_rent
     )
 
@@ -32,32 +33,23 @@ def get_room_dashboard_summary(
         db: Session,
         lodge_id: int,
         rooms: RoomFilter,
-        filter_by: Union[BadgeTexts, RoomStatus] = None,
+        filter_by: DashboardFilters,
         skip: Optional[int] = None,
         limit: Optional[int] = None
 ):
     # occupied rooms
-    if not filter_by:
-        rooms.safe = crud_room.get_dashboard_rooms(db, filter_by=BadgeTexts.SAFE, lodge_id=lodge_id, skip=skip,
-                                                   limit=limit)
-        rooms.expiring = crud_room.get_dashboard_rooms(db, filter_by=BadgeTexts.EXPIRING, lodge_id=lodge_id, skip=skip,
-                                                       limit=limit)
-        rooms.overdue = crud_room.get_dashboard_rooms(db, filter_by=BadgeTexts.OVERDUE, lodge_id=lodge_id, skip=skip,
-                                                      limit=limit)
-        rooms.owing = crud_room.get_dashboard_rooms(db, filter_by=BadgeTexts.OWING, lodge_id=lodge_id, skip=skip,
-                                                    limit=limit)
-        # vacant rooms
-        rooms.vacant = crud_room.get_dashboard_rooms(db, filter_by=RoomStatus.VACANT, lodge_id=lodge_id, skip=skip,
-                                                     limit=limit)
-        #maintenance rooms
-        rooms.maintenance = crud_room.get_dashboard_rooms(db, filter_by=RoomStatus.MAINTENANCE, lodge_id=lodge_id,
-                                                          skip=skip, limit=limit)
+    raw_rooms = crud_room.get_dashboard_rooms(db, filter_by=filter_by, lodge_id=lodge_id, skip=skip, limit=limit)
+    categorized_rooms = [RoomGridSummary(**row) for row in raw_rooms]
 
-    else:
-        filtered_rooms = crud_room.get_dashboard_rooms(db, filter_by=filter_by, lodge_id=lodge_id, skip=skip,
-                                                       limit=limit)
-        filter_badge_text = filtered_rooms[0].badge_text.lower()
-        setattr(rooms, filter_badge_text, filtered_rooms)
+    rooms.safe = [room for room in categorized_rooms if room.badge_text == BadgeTexts.SAFE]
+    rooms.expiring = [room for room in categorized_rooms if room.badge_text == BadgeTexts.EXPIRING]
+    rooms.overdue = [room for room in categorized_rooms if room.badge_text == BadgeTexts.OVERDUE]
+    rooms.owing = [room for room in categorized_rooms if room.badge_text == BadgeTexts.OWING]
+
+    # vacant rooms
+    rooms.vacant = [room for room in categorized_rooms if room.badge_text == RoomStatus.VACANT]
+    #maintenance rooms
+    rooms.maintenance = [room for room in categorized_rooms if room.badge_text == RoomStatus.MAINTENANCE]
 
     return OccupiedRoomLeasesResponse(
         safe=rooms.safe,
@@ -68,11 +60,18 @@ def get_room_dashboard_summary(
 
 
 def get_entity_count_summary(db: Session, lodge_id: int):
-   total_entities =  crud_lodge.get_all_entities_count(db, lodge_id)
-   entity_counts = EntityCountResponse(
-       total_rooms= total_entities.
+    room_status_counts =crud_lodge.get_room_status_counts(db, lodge_id=lodge_id)
+    total_rooms = {'total_rooms': sum(room_status_counts.values()) if room_status_counts else 0}
+    total_tenants = crud_lodge.get_tenant_counts(db, lodge_id=lodge_id)
+    occupied_count = crud_lodge.get_occupied_counts(db, lodge_id=lodge_id)
 
-   )
+    total_entity_counts = EntityCountResponse(
+        **total_rooms,
+        **total_tenants,
+        room_status_counts=RoomStatusCounts(**room_status_counts),
+        occupied_counts=OccupiedCounts(**occupied_count)
+    )
+    return total_entity_counts
 
 
 
@@ -80,20 +79,19 @@ def get_landlord_dashboard(
         db: Session,
         lodge_id: int,
         landlord_id: int,
-        filter_by: Union[BadgeTexts, RoomStatus] = None,
+        filter_by: DashboardFilters,
         skip: Optional[int] = None,
         limit: Optional[int] = None
 ):
     # check if the lodge exist and is owned by the landlord
-    lodge_service.verify_lodge_ownership(lodge_id=lodge_id, landlord_id=landlord_id)
+    lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_id)
 
     #TODO: SUM ALL financial for the landlords revenue(expected, collected & outstanding)
-    financials = get_financial_summary(db, lodge_id=lodge_id)
-
+    financials = get_financial_summary(db, lodge_id=lodge_id, filter_by=filter_by)
+    print(financials.model_dump_json(indent=4))
     # Todo: count all the entities tied to the landlord's lodge( rooms, tenant, room statuses)
-    #count rooms , tenants, vacant, maintenance, occupied, safe , expiring, owing, overdue
-    #count because we want the totals across the entire property
     entity_count = get_entity_count_summary(db, lodge_id=lodge_id)
+    print(entity_count.model_dump_json(indent=4))
     #Todo: group rooms into occupied(safe, expiring & overdue) , vacant & maintenance
     rooms = RoomFilter()
 
@@ -105,8 +103,9 @@ def get_landlord_dashboard(
 
     dashboard_stats = LandlordDashboardStats(
         financials=financials,
-        entity_counts= entity_count,
+        entity_counts=entity_count,
         occupied_rooms_lease=occupied_rooms_lease,
         maintenance_rooms=rooms.maintenance,
         vacant_rooms=rooms.vacant,
     )
+    return dashboard_stats

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.core.enums import UserRole
 from app.models.room import Room
-from app.schemas.lodge import LodgeCreate, LodgeUpdate
+from app.schemas.lodge import LodgeCreate, LodgeUpdate, LodgeResponse
 from app.core.exceptions import LodgeAlreadyExistError, LodgeNotFoundError
 from app.crud.lodge import crud_lodge
 
@@ -11,7 +11,7 @@ def is_landlord(user_role: UserRole):
 def is_tenant(user_role: UserRole):
     return user_role == UserRole.TENANT
 
-def create_new_loge_for_landlord(db: Session, landlord_id: int, lodge_in: LodgeCreate):
+def create_new_lodge_for_landlord(db: Session, landlord_id: int, lodge_in: LodgeCreate) -> LodgeResponse:
     lodge_exist = crud_lodge.get_by_name_and_landlord(db, landlord_id=landlord_id, lodge_name=lodge_in.name)
 
     if lodge_exist:

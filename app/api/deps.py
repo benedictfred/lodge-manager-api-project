@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.exceptions import NotLandlordError, NotTenantError, UserNotFoundError
 from app.db.session import SessionLocal
-from typing import Generator
+from typing import Generator, cast
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from app.crud.user import crud_user
@@ -40,20 +40,21 @@ def get_current_user(
             token,
             key=settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
-
         )
+
         user_id = payload.get('sub')
         if not user_id:
             raise credentials_exception
+
     except (jwt.PyJWTError, ValueError, ValidationError):
         raise credentials_exception
 
-    user = crud_user.get(db=db, item_id=user_id)
+    current_user = crud_user.get(db=db, item_id=user_id)
 
-    if not user:
+    if not current_user or not current_user.is_active:
         raise UserNotFoundError()
 
-    return user
+    return cast(User, current_user)
 
 
 #dependency for ensuring the user is a landlord

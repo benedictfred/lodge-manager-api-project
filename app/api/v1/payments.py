@@ -1,18 +1,14 @@
 from typing import Optional
-
-from app.crud import payment as crud_payment
-from app.crud import lease as crud_lease
 from app.schemas import payment as schema_payment
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user, get_landlord_user, get_tenant_user
 from app.models.user import User
 from app.services import payment_service
 
 router = APIRouter()
-#create a payment record endpoint by landlord in a lease
-#
+
 
 @router.post('/create-payment', response_model=schema_payment.PaymentResponse)
 def create_payment(
@@ -63,7 +59,7 @@ def list_tenant_payments(
         lease_id=lease_id,
         skip=skip,
         limit=limit,
-        tenant_id = tenant_user.tenantprofile.id
+        tenant_id = tenant_user.tenant_profile.id
     )
 
 

@@ -21,6 +21,7 @@ class LodgeCreate(LodgeBase):
     pass
 
 
+
 class LodgeResponse(LodgeBase):
     id: int
     landlord_id: int
