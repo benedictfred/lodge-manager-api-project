@@ -23,7 +23,7 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         return db.query(self.model).filter(self.model.lease_id == lease_id).offset(skip).limit(limit).all()
 
     def get_potential_income_from_rooms(self, db: Session, lodge_id: int):
-        stmt = select(func.sum(Room.base_rent_price).label('potential_revenue')).where(Room.lodge_id == lodge_id)
+        stmt = select(func.coalesce(func.sum(Room.base_rent_price), 0).label('potential_revenue')).where(Room.lodge_id == lodge_id)
 
         return db.execute(stmt).scalar()
 

@@ -15,7 +15,8 @@ from fastapi.testclient import TestClient
 
 from app.models.lease import Lease
 from app.schemas import user as schema_user
-from app.services import user_service, lodge_service, tenant_services, room_service, lease_services, payment_service
+from app.services import user_service, lodge_service, tenant_services, room_service, lease_services, payment_service, \
+    dashboard_service
 from app.schemas import tenantprofile as schema_tenant
 from app.schemas import lodge as schema_lodge
 from app.schemas import room as schema_room
@@ -719,5 +720,6 @@ def add_dashboard_stats(test_db,leases_in_db, add_lodge_to_db, add_landlord_to_d
                 current_landlord_id=add_landlord_to_db.id,
                 payment_data=payment_data
             )
+
     return lodge_id
 
