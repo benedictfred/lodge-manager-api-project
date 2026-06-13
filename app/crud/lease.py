@@ -105,7 +105,7 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         db.refresh(db_lease)
         return db_lease
 
-    def  terminate_lease_request(self, db: Session, db_lease: Lease) -> Lease:
+    def  request_terminate_lease(self, db: Session, db_lease: Lease) -> Lease:
         db_lease.status = LeaseStatus.PENDING_TERMINATION
         db.commit()
         db.refresh(db_lease)

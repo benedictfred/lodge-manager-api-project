@@ -1,10 +1,7 @@
-import datetime
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
 from datetime import datetime
-
-from sqlalchemy import DateTime
 
 
 class PaymentBase(BaseModel):
@@ -16,6 +13,6 @@ class PaymentCreate(PaymentBase):
 
 class PaymentResponse(PaymentBase):
     id: int
-    payment_date: DateTime
+    payment_date: datetime
 
     model_config = ConfigDict(from_attributes=True)

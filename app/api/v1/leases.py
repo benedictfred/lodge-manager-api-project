@@ -42,7 +42,7 @@ def get_leases_for_landlord(
 ):
 
 
-    return lease_services.filter_leases_for_landlord(
+    return lease_services.get_filtered_landlord_leases(
         db,
         landlord_id=current_user.id,
         lodge_id=lodge_id,
@@ -122,7 +122,7 @@ def request_lease_termination(
     return lease_services.appeal_for_lease_termination(
         db,
         lease_id=lease_id,
-        tenant_id = current_tenant.id
+        tenant_id = current_tenant.tenantprofile.id
     )
 
 

@@ -2,12 +2,10 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy import func
 from app.db.session import Base
-from sqlalchemy import Integer,  String, Enum, ForeignKey, DateTime
+from sqlalchemy import Integer, String, Enum, ForeignKey, DateTime
 from app.core.enums import RoomStatus
 
 from typing import TYPE_CHECKING
-
-
 
 if TYPE_CHECKING:
     from app.models.lodge import Lodge
@@ -28,7 +26,7 @@ class Room(Base):
         server_default=func.now(),
         nullable=False
     )
-    leases: Mapped["Lease"]= relationship('Lease', back_populates='room',)
+    leases: Mapped["Lease"] = relationship('Lease', back_populates='room', )
     lodge: Mapped["Lodge"] = relationship("Lodge", back_populates='rooms')
 
     __table_args__ = (
@@ -37,3 +35,14 @@ class Room(Base):
             'lodge_id',
             name='lodge_room_uc'
         ),)
+
+
+class RoomFilter:
+    def __init__(self):
+        self.safe = []
+        self.expiring = []
+        self.overdue = []
+        self.owing = []
+        self.vacant = []
+        self.maintenance = []
+

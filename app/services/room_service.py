@@ -24,9 +24,9 @@ def get_lodge_rooms(db: Session, lodge_id: int, landlord_id, skip: int, limit: i
 
 def verify_room_existence(db: Session, lodge_id: int, room_id: int):
     room = crud_room.get(db, item_id=room_id)
-    room_exist_in_lodge = room.lodge_id != lodge_id
 
-    if not room or room_exist_in_lodge:
+
+    if not room or room.lodge_id != lodge_id:
         raise RoomNotFoundError()
 
     return room

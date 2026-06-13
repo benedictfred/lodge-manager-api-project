@@ -28,5 +28,5 @@ class Lease(Base):
     tenant: Mapped["TenantProfile"] = relationship('TenantProfile', back_populates='leases')
     room: Mapped["Room"] = relationship('Room', back_populates='leases')
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    payments: Mapped["Payment"] = relationship('Payment', back_populates='lease')
+    payments: Mapped[list["Payment"]] = relationship('Payment', back_populates='lease')
 

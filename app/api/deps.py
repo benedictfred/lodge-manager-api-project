@@ -3,6 +3,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.exceptions import NotLandlordError, NotTenantError, UserNotFoundError
 from app.db.session import SessionLocal
 from typing import Generator
 from fastapi.security import OAuth2PasswordBearer
@@ -50,10 +51,7 @@ def get_current_user(
     user = crud_user.get(db=db, item_id=user_id)
 
     if not user:
-        raise HTTPException(
-            status_code=404,
-            detail='User not found'
-        )
+        raise UserNotFoundError()
 
     return user
 
@@ -66,18 +64,13 @@ def get_landlord_user(
         current_user: User = Depends(get_current_user)
 ):
     if not is_landlord(current_user.role):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only landlords are allowed'
-        )
+       raise NotLandlordError()
     return current_user
+
 
 def get_tenant_user(
         current_user: User = Depends(get_current_user)
 ):
     if not is_tenant(current_user.role):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only tenants are allowed'
-        )
+        raise NotTenantError()
     return current_user
