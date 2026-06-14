@@ -1,3 +1,10 @@
+"""
+SQLAlchemy models for the room domain.
+
+This module contains the Room model which represents a specific room
+within a lodge that can be leased to a tenant. It also includes data
+classes for filtering rooms.
+"""
 from dataclasses import dataclass, field
 from datetime import datetime
 from sqlalchemy import UniqueConstraint
@@ -17,6 +24,20 @@ if TYPE_CHECKING:
 
 
 class Room(Base):
+    """
+    Represents a rentable room within a lodge.
+
+    Attributes:
+        id (int): Primary key.
+        lodge_id (int): Foreign key to the lodge containing this room.
+        room_no (str): The room number or identifier.
+        description (str): A description of the room.
+        base_rent_price (int): The base rental price for the room.
+        status (RoomStatus): The current status of the room (e.g., VACANT, OCCUPIED).
+        created_at (datetime): Timestamp when the room was created.
+        leases (Lease): Relationship to the leases associated with this room.
+        lodge (Lodge): Relationship to the lodge containing this room.
+    """
     __tablename__ = 'rooms'
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -42,6 +63,17 @@ class Room(Base):
 
 @dataclass
 class RoomFilter:
+    """
+    Data class for filtering rooms by their status or condition.
+
+    Attributes:
+        safe (list[RoomGridSummary]): Rooms that are in a safe state.
+        expiring (list[RoomGridSummary]): Rooms with leases expiring soon.
+        overdue (list[RoomGridSummary]): Rooms with overdue payments.
+        owing (list[RoomGridSummary]): Rooms with outstanding balances.
+        vacant (list[RoomGridSummary]): Rooms that are currently vacant.
+        maintenance (list[RoomGridSummary]): Rooms requiring maintenance.
+    """
     safe: list[RoomGridSummary] = field(default_factory=list)
     expiring:  list[RoomGridSummary] = field(default_factory=list)
     overdue: list[RoomGridSummary] = field(default_factory=list)

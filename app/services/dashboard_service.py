@@ -1,3 +1,8 @@
+"""
+Module providing dashboard-related business logic.
+
+This module contains services for generating dashboard summaries.
+"""
 from typing import Optional
 
 from app.crud.lodge import crud_lodge
@@ -17,6 +22,17 @@ from app.core.enums import RoomStatus
 
 
 def get_financial_summary(db: Session, lodge_id: int, filter_by: DashboardFilters):
+    """
+    Get financial summary for a specific lodge.
+
+    Args:
+        db (Session): The database session.
+        lodge_id (int): The ID of the lodge.
+        filter_by (DashboardFilters): Dashboard filters to apply.
+
+    Returns:
+        FinancialResponse: The financial summary details.
+    """
     potential_revenue = crud_payment.get_potential_income_from_rooms(db, lodge_id=lodge_id)
     active_lease_financials = crud_payment.get_financials_for_active_leases(db, lodge_id=lodge_id, filter_by=filter_by)
     unpaid_rent = crud_payment.get_total_unpaid_rent(db, lodge_id=lodge_id, filter_by=filter_by)
@@ -37,6 +53,20 @@ def get_room_dashboard_summary(
         skip: Optional[int] = None,
         limit: Optional[int] = None
 ):
+    """
+    Get a dashboard summary of rooms in a specific lodge.
+
+    Args:
+        db (Session): The database session.
+        lodge_id (int): The ID of the lodge.
+        rooms (RoomFilter): Filter object to hold categorized rooms.
+        filter_by (DashboardFilters): Dashboard filters to apply.
+        skip (Optional[int]): Number of records to skip. Defaults to None.
+        limit (Optional[int]): Maximum number of records to return. Defaults to None.
+
+    Returns:
+        OccupiedRoomLeasesResponse: Summary of occupied room leases.
+    """
     # occupied rooms
     raw_rooms = crud_room.get_dashboard_rooms(db, filter_by=filter_by, lodge_id=lodge_id, skip=skip, limit=limit)
     categorized_rooms = [RoomGridSummary(**row) for row in raw_rooms]
@@ -60,6 +90,16 @@ def get_room_dashboard_summary(
 
 
 def get_entity_count_summary(db: Session, lodge_id: int):
+    """
+    Get the entity count summary for a specific lodge.
+
+    Args:
+        db (Session): The database session.
+        lodge_id (int): The ID of the lodge.
+
+    Returns:
+        EntityCountResponse: The entity count details.
+    """
     room_status_counts =crud_lodge.get_room_status_counts(db, lodge_id=lodge_id)
     total_rooms = {'total_rooms': sum(room_status_counts.values()) if room_status_counts else 0}
     total_tenants = crud_lodge.get_tenant_counts(db, lodge_id=lodge_id)
@@ -83,6 +123,20 @@ def get_landlord_dashboard(
         skip: Optional[int] = None,
         limit: Optional[int] = None
 ):
+    """
+    Get the dashboard statistics for a landlord.
+
+    Args:
+        db (Session): The database session.
+        lodge_id (int): The ID of the lodge.
+        landlord_id (int): The ID of the landlord.
+        filter_by (DashboardFilters): Dashboard filters to apply.
+        skip (Optional[int]): Number of records to skip. Defaults to None.
+        limit (Optional[int]): Maximum number of records to return. Defaults to None.
+
+    Returns:
+        LandlordDashboardStats: The complete dashboard statistics.
+    """
     # check if the lodge exist and is owned by the landlord
     lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_id)
 

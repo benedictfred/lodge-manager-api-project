@@ -1,3 +1,9 @@
+"""
+SQLAlchemy models for the payment domain.
+
+This module contains the Payment model which represents a payment made
+by a tenant towards a specific lease agreement.
+"""
 from datetime import datetime
 from sqlalchemy.sql import func
 from sqlalchemy import  ForeignKey, DateTime
@@ -11,6 +17,16 @@ if TYPE_CHECKING:
 
 
 class Payment(Base):
+    """
+    Represents a payment made towards a lease.
+
+    Attributes:
+        id (int): Primary key.
+        lease_id (int): Foreign key to the associated lease.
+        amount_paid (int): The amount paid in this transaction.
+        payment_date (datetime): Timestamp when the payment was made.
+        lease (list[Lease]): Relationship to the associated lease.
+    """
     __tablename__ = 'payments'
 
     id: Mapped[int] = mapped_column(primary_key=True)

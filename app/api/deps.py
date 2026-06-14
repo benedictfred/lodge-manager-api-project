@@ -1,3 +1,8 @@
+"""
+Dependency injection module for the FastAPI application.
+
+Provides dependencies for database session management and user authentication.
+"""
 import jwt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -19,6 +24,12 @@ oauth_2 = OAuth2PasswordBearer(
 
 
 def get_db() -> Generator:
+    """
+    Get a database session generator.
+
+    Yields:
+        Session: The database session.
+    """
     db = SessionLocal()
     try:
         yield db
@@ -30,6 +41,20 @@ def get_current_user(
         db: Session = Depends(get_db),
         token: str = Depends(oauth_2)
 ):
+    """
+    Get the currently authenticated user from the token.
+
+    Args:
+        db (Session): The database session.
+        token (str): The OAuth2 access token.
+
+    Returns:
+        User: The authenticated user instance.
+
+    Raises:
+        HTTPException: If the credentials could not be validated.
+        UserNotFoundError: If the user is not found or inactive.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail='Could not validate credentials'
@@ -64,6 +89,18 @@ def get_current_user(
 def get_landlord_user(
         current_user: User = Depends(get_current_user)
 ):
+    """
+    Get the current authenticated user and ensure they have a landlord role.
+
+    Args:
+        current_user (User): The current authenticated user.
+
+    Returns:
+        User: The authenticated landlord user.
+
+    Raises:
+        NotLandlordError: If the user does not have a landlord role.
+    """
     if not is_landlord(current_user.role):
        raise NotLandlordError()
     return current_user
@@ -72,6 +109,18 @@ def get_landlord_user(
 def get_tenant_user(
         current_user: User = Depends(get_current_user)
 ):
+    """
+    Get the current authenticated user and ensure they have a tenant role.
+
+    Args:
+        current_user (User): The current authenticated user.
+
+    Returns:
+        User: The authenticated tenant user.
+
+    Raises:
+        NotTenantError: If the user does not have a tenant role.
+    """
     if not is_tenant(current_user.role):
         raise NotTenantError()
     return current_user

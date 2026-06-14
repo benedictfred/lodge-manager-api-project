@@ -1,3 +1,8 @@
+"""
+Module providing tenant-related business logic.
+
+This module contains services for managing tenants and their profiles.
+"""
 from typing import cast
 
 from sqlalchemy.orm import Session
@@ -21,6 +26,16 @@ def sign_up_tenant(
         db: Session,
         tenant_in: TenantProfileCreate,
 ):
+    """
+    Sign up a new tenant.
+
+    Args:
+        db (Session): The database session.
+        tenant_in (TenantProfileCreate): The tenant profile creation data.
+
+    Returns:
+        TenantProfile: The newly created tenant profile.
+    """
     if not crud_lodge.get(db, item_id=tenant_in.tenant_info.lodge_id):
         raise LodgeNotFoundError()
 
@@ -48,6 +63,19 @@ def fetch_lodge_tenants(
         skip: int,
         limit: int
 ):
+    """
+    Fetch all tenants for a specific lodge.
+
+    Args:
+        db (Session): The database session.
+        lodge_id (int): The ID of the lodge.
+        landlord_user (User): The landlord user requesting the data.
+        skip (int): Number of records to skip.
+        limit (int): Maximum number of records to return.
+
+    Returns:
+        List[TenantProfile]: A list of tenant profiles.
+    """
     lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_user.id)
     tenants = crud_tenant.get_tenants(db, lodge_id=lodge_id, skip=skip, max_limit=limit)
     return tenants
@@ -58,6 +86,17 @@ def update_tenant_profile(
         base_user: User,
         update_data: TenantProfileUpdate
 ):
+    """
+    Update a tenant profile.
+
+    Args:
+        db (Session): The database session.
+        base_user (User): The user associated with the tenant.
+        update_data (TenantProfileUpdate): The updated tenant profile data.
+
+    Returns:
+        TenantProfile: The updated tenant profile.
+    """
 
     tenant_user = base_user.tenant_profile
 
@@ -67,6 +106,15 @@ def update_tenant_profile(
 def fetch_tenant(
         current_user: User
 ):
+    """
+    Fetch the tenant profile of the current user.
+
+    Args:
+        current_user (User): The current user.
+
+    Returns:
+        TenantProfile: The tenant profile.
+    """
     tenant_profile = current_user.tenant_profile
 
     if not tenant_profile:
@@ -80,6 +128,17 @@ def fetch_tenant_by_landlord(
         tenant_id: int,
         current_user: User
 ):
+    """
+    Fetch a tenant's profile by a landlord.
+
+    Args:
+        db (Session): The database session.
+        tenant_id (int): The ID of the tenant.
+        current_user (User): The landlord user.
+
+    Returns:
+        TenantProfile: The retrieved tenant profile.
+    """
     tenant = crud_tenant.get(db, item_id=tenant_id)
 
     if not tenant:

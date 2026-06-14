@@ -1,3 +1,8 @@
+"""
+Module providing room-related CRUD operations.
+
+This module contains the CRUD operations for Room models.
+"""
 from app.core.enums import BadgeVariants, LeaseStatus, BadgeTexts, RoomStatus
 from app.models.lease import Lease
 from app.models.lodge import Lodge
@@ -14,11 +19,24 @@ from utilities.dashboard_utilities import apply_dashboard_filters
 
 
 class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
+    """
+    CRUD class for Room model operations.
+    """
     #method to get room by lodge and number
     # method to get many rooms in a lodge with pagination support
 
     def get_room_by_lodge_and_number(self, db: Session, room_no: str, lodge_id: int):
-        """Retrieve a specific room by its room number."""
+        """
+        Retrieve a specific room by its room number.
+
+        Args:
+            db (Session): The database session.
+            room_no (str): The room number.
+            lodge_id (int): The ID of the lodge.
+
+        Returns:
+            Room: The found room or None.
+        """
 
         return db.query(self.model).filter(
             self.model.lodge_id == lodge_id,
@@ -26,7 +44,17 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
         ).first()
 
     def get_rooms(self, db: Session, skip: int = 0, max_limit: int = 50):
-        """Retrieve a list of rooms with pagination support."""
+        """
+        Retrieve a list of rooms with pagination support.
+
+        Args:
+            db (Session): The database session.
+            skip (int, optional): Number of records to skip. Defaults to 0.
+            max_limit (int, optional): Maximum number of records to return. Defaults to 50.
+
+        Returns:
+            List[Room]: A list of retrieved rooms.
+        """
         stmt = select(self.model).join(Lodge).offset(skip).limit(limit=max_limit)
         return db.execute(stmt).scalars().all()
 
@@ -39,6 +67,19 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             skip: int = 0,
             limit: int = 50
     ) :
+        """
+        Retrieve rooms formatted for the dashboard with filters applied.
+
+        Args:
+            db (Session): The database session.
+            filter_by (DashboardFilters): The filters to apply.
+            lodge_id (int): The ID of the lodge.
+            skip (int, optional): Number of records to skip. Defaults to 0.
+            limit (int, optional): Maximum number of records to return. Defaults to 50.
+
+        Returns:
+            List[RowMapping]: A list of mapped rows containing dashboard room data.
+        """
 
         stmt = (select(
             Lease.id.label('lease_id'),

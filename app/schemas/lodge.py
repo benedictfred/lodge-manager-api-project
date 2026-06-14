@@ -1,3 +1,8 @@
+"""
+Pydantic schemas for the lodge domain.
+
+This module contains schemas used to represent, create, and update lodges.
+"""
 from datetime import datetime
 from typing import Optional, List
 
@@ -8,6 +13,13 @@ from app.schemas.tenantprofile import TenantProfileResponse
 
 
 class LodgeBase(BaseModel):
+    """
+    Base schema for a lodge.
+
+    Attributes:
+        name (str): The name of the lodge.
+        address (str): The address of the lodge.
+    """
     name: str
     address: str
 

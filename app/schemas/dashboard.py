@@ -1,3 +1,9 @@
+"""
+Pydantic schemas for the dashboard domain.
+
+This module contains schemas used to structure the data for the landlord's dashboard,
+including financial summaries, entity counts, and room statuses.
+"""
 from enum import Enum
 from typing import Optional, Annotated
 
@@ -11,6 +17,16 @@ from app.schemas.room import RoomGridSummary
 
 
 class LandlordDashboardStats(BaseModel):
+    """
+    Schema representing the complete dashboard statistics for a landlord.
+
+    Attributes:
+        financials (FinancialResponse): The financial summary.
+        entity_counts (EntityCountResponse): The counts of different entities.
+        occupied_rooms_lease (OccupiedRoomLeasesResponse): The lease details of occupied rooms.
+        vacant_rooms (list[RoomGridSummary]): The list of vacant rooms.
+        maintenance_rooms (list[RoomGridSummary]): The list of rooms under maintenance.
+    """
     financials: FinancialResponse
     entity_counts: EntityCountResponse
     occupied_rooms_lease: OccupiedRoomLeasesResponse
@@ -20,6 +36,13 @@ class LandlordDashboardStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class DashboardFilters(BaseModel):
+    """
+    Schema for filtering dashboard statistics.
+
+    Attributes:
+        room_status_filters (list[RoomStatus]): Filters for room statuses.
+        financial_filters (list[BadgeTexts]): Filters for financial categories.
+    """
     room_status_filters: list[RoomStatus]
     financial_filters: list[BadgeTexts]
 

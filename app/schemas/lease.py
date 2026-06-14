@@ -1,3 +1,8 @@
+"""
+Pydantic schemas for the lease domain.
+
+This module contains schemas used to represent, create, and update lease agreements.
+"""
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date, datetime
@@ -7,6 +12,17 @@ from app.schemas.room import RoomGridSummary
 
 
 class LeaseBase(BaseModel):
+    """
+    Base schema for a lease agreement.
+
+    Attributes:
+        tenant_id (int): The ID of the tenant.
+        room_id (int): The ID of the leased room.
+        agreed_rent_amt (int): The agreed rental amount.
+        status (LeaseStatus): The current status of the lease.
+        start_date (date): The start date of the lease.
+        end_date (date): The end date of the lease.
+    """
     tenant_id: int
     room_id: int
     agreed_rent_amt: int = Field(..., ge=0)

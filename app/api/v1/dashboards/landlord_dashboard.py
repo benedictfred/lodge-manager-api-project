@@ -1,3 +1,8 @@
+"""
+API routes for landlord dashboards.
+
+Provides endpoints to retrieve dashboard statistics and summaries for landlords.
+"""
 
 from fastapi import APIRouter, Depends
 from fastapi.params import Query
@@ -27,6 +32,21 @@ def get_landlord_dashboard(
         landlord_user: User = Depends(get_landlord_user),
 
 ):
+    """
+    Retrieve dashboard statistics for a specific lodge.
+
+    Args:
+        lodge_id (int): The ID of the lodge.
+        room_statuses (list[RoomStatus]): Optional list of room statuses to filter by.
+        financial_filters (list[BadgeTexts]): Optional list of financial filters to apply.
+        skip (int | None): Number of records to skip.
+        limit (int | None): Maximum number of records to return.
+        db (Session): The database session.
+        landlord_user (User): The authenticated landlord user.
+
+    Returns:
+        schema_dashboard.LandlordDashboardStats: The aggregated dashboard statistics.
+    """
     #goal: to get a list of landlord dashboard stats with
     #financial summary, total entities count, dictionary of dashboard rooms categories
     # that match a specific filter and is paginated

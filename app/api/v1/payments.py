@@ -1,3 +1,8 @@
+"""
+API routes for managing payments.
+
+Provides endpoints for creating payments and fetching payment histories for both landlords and tenants.
+"""
 from typing import Optional
 from app.schemas import payment as schema_payment
 from typing import List
@@ -16,6 +21,17 @@ def create_payment(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_landlord_user)
 ):
+    """
+    Create a new payment record.
+
+    Args:
+        payment_data (schema_payment.PaymentCreate): The payment data to record.
+        db (Session): The database session.
+        current_user (User): The authenticated landlord user.
+
+    Returns:
+        schema_payment.PaymentResponse: The created payment record.
+    """
 
     #does the lease exist and belong in the lodge of the current landlord
 
@@ -34,6 +50,19 @@ def list_lease_payments_for_landlord(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    """
+    List all payments associated with a specific lease for the landlord.
+
+    Args:
+        lease_id (int): The ID of the lease.
+        skip (Optional[int]): Number of records to skip.
+        limit (Optional[int]): Maximum number of records to return.
+        db (Session): The database session.
+        current_user (User): The authenticated user (landlord).
+
+    Returns:
+        List[schema_payment.PaymentResponse]: A list of payments.
+    """
     #only get payments that the landlord has access to....
     #use pagination while fetching the payment history
 
@@ -54,6 +83,19 @@ def list_tenant_payments(
         tenant_user: User = Depends(get_tenant_user)
 
 ):
+    """
+    List all payments associated with a specific lease for the tenant.
+
+    Args:
+        lease_id (int): The ID of the lease.
+        skip (Optional[int]): Number of records to skip.
+        limit (Optional[int]): Maximum number of records to return.
+        db (Session): The database session.
+        tenant_user (User): The authenticated tenant user.
+
+    Returns:
+        List[schema_payment.PaymentResponse]: A list of the tenant's payments.
+    """
     return payment_service.fetch_tenant_lease_payments(
         db,
         lease_id=lease_id,

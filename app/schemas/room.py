@@ -1,3 +1,9 @@
+"""
+Pydantic schemas for the room domain.
+
+This module contains schemas used to represent, create, and update rooms,
+as well as summarizing room statuses for dashboards.
+"""
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, Union
 from app.core.enums import BadgeTexts, BadgeVariants
@@ -6,6 +12,15 @@ from datetime import datetime
 
 
 class RoomBase(BaseModel):
+    """
+    Base schema for a room.
+
+    Attributes:
+        room_no (str): The room number or identifier.
+        description (Optional[str]): The description of the room.
+        base_rent_price (int): The base rental price.
+        status (RoomStatus): The current status of the room.
+    """
     room_no: str
     description: Optional[str] = None
     base_rent_price: int = Field(default=200000, ge=0)

@@ -1,3 +1,9 @@
+"""
+SQLAlchemy models for the tenant profile domain.
+
+This module contains the TenantProfile model which represents the details
+and status of a tenant living in a lodge.
+"""
 from app.core.enums import TenantType, StudentLevel
 from app.db.session import  Base
 from sqlalchemy import String, Enum, ForeignKey
@@ -11,6 +17,23 @@ if TYPE_CHECKING:
 
 
 class TenantProfile(Base):
+    """
+    Represents a tenant's profile and their associated details.
+
+    Attributes:
+        id (int): Primary key.
+        user_id (int): Foreign key to the associated user account.
+        lodge_id (int): Foreign key to the lodge where the tenant resides.
+        tenant_type (TenantType): The type of tenant (e.g., STUDENT, PROFESSIONAL).
+        emergency_contact_name (str): Name of the emergency contact.
+        emergency_contact_phone_no (str): Phone number of the emergency contact.
+        level (StudentLevel | None): The academic level if the tenant is a student.
+        department (str | None): The academic department if the tenant is a student.
+        reg_no (str | None): The registration number if the tenant is a student.
+        user (User): Relationship to the associated user account.
+        lodge (Lodge): Relationship to the associated lodge.
+        leases (Lease): Relationship to the tenant's leases.
+    """
     __tablename__ = 'tenant_profiles'
 
     id: Mapped[int] = mapped_column(primary_key=True)

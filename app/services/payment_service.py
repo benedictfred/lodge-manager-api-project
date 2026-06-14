@@ -1,3 +1,8 @@
+"""
+Module providing payment-related business logic.
+
+This module contains services for managing payments.
+"""
 from app.core.enums import LeaseStatus
 from app.core.exceptions import LeaseNotFoundError, RoomNotFoundError, InvalidLeaseActionError, RentAmtExceededError
 from app.crud.payment import crud_payment
@@ -11,6 +16,17 @@ from app.services.lease_services import verify_tenant_owns_lease
 
 
 def can_add_payment(total_payments: int, incoming_amt: int, agreed_amt: int) -> bool:
+    """
+    Check if a payment can be added based on the total payments and agreed amount.
+
+    Args:
+        total_payments (int): The total amount paid so far.
+        incoming_amt (int): The incoming payment amount.
+        agreed_amt (int): The total agreed amount for the lease.
+
+    Returns:
+        bool: True if the payment can be added, False otherwise.
+    """
     return total_payments + incoming_amt <= agreed_amt
 
 
@@ -19,6 +35,17 @@ def add_payment_record(
         current_landlord_id: int,
         payment_data: PaymentCreate
 ):
+    """
+    Add a new payment record.
+
+    Args:
+        db (Session): The database session.
+        current_landlord_id (int): The ID of the current landlord.
+        payment_data (PaymentCreate): The data for the new payment.
+
+    Returns:
+        Payment: The newly created payment record.
+    """
     #use the lease id in the payment data to find the lease
     #verify that the landlord owns the lodge the lease is in
     #if lease exist create a payment record with that lease id...
@@ -59,6 +86,19 @@ def fetch_payments_by_lease(
         skip: Optional[int] = None,
         limit: Optional[int] = None
 ):
+    """
+    Fetch payments for a specific lease.
+
+    Args:
+        db (Session): The database session.
+        lease_id (int): The ID of the lease.
+        landlord_id (int): The ID of the landlord.
+        skip (Optional[int]): Number of records to skip. Defaults to None.
+        limit (Optional[int]): Maximum number of records to return. Defaults to None.
+
+    Returns:
+        list[Payment]: A list of payments for the lease.
+    """
     lease = crud_lease.get(db, item_id=lease_id)
 
     if not lease:
@@ -79,6 +119,19 @@ def fetch_tenant_lease_payments(
         skip: Optional[int],
         limit: Optional[int]
 ):
+    """
+    Fetch payments for a specific lease by a tenant.
+
+    Args:
+        db (Session): The database session.
+        lease_id (int): The ID of the lease.
+        tenant_id (int): The ID of the tenant.
+        skip (Optional[int]): Number of records to skip.
+        limit (Optional[int]): Maximum number of records to return.
+
+    Returns:
+        list[Payment]: A list of payments for the lease.
+    """
     lease = crud_lease.get(db, item_id=lease_id)
 
     if not lease:

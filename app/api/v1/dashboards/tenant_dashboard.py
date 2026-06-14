@@ -1,3 +1,8 @@
+"""
+API routes for tenant dashboards.
+
+Provides endpoints to retrieve dashboard statistics and summaries for tenants.
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session

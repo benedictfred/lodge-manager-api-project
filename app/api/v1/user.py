@@ -1,3 +1,8 @@
+"""
+API routes for user management.
+
+Provides endpoints for user registration (landlords and tenants) and authentication (login).
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -14,6 +19,16 @@ def register_landlord(
         landlord_in: schema_user.UserCreate,
         db: Session = Depends(get_db)
 ):
+    """
+    Register a new landlord user.
+
+    Args:
+        landlord_in (schema_user.UserCreate): The registration data for the landlord.
+        db (Session): The database session.
+
+    Returns:
+        schema_user.UserResponse: The newly created landlord user.
+    """
 
     return user_service.sign_up_landlord(db=db, landlord_data=landlord_in)
 
@@ -23,6 +38,16 @@ def register_tenant(
         tenant_in: schema_tenant.TenantProfileCreate,
         db: Session = Depends(get_db)
 ):
+    """
+    Register a new tenant user profile.
+
+    Args:
+        tenant_in (schema_tenant.TenantProfileCreate): The registration data for the tenant.
+        db (Session): The database session.
+
+    Returns:
+        schema_tenant.TenantProfileResponse: The newly created tenant profile.
+    """
 
     return tenant_services.sign_up_tenant(db=db, tenant_in=tenant_in)
 
@@ -34,4 +59,14 @@ def login_user(
         db: Session = Depends(get_db),
         form_data: OAuth2PasswordRequestForm = Depends()
 ):
+    """
+    Authenticate a user and return an access token.
+
+    Args:
+        db (Session): The database session.
+        form_data (OAuth2PasswordRequestForm): The login credentials (username/email and password).
+
+    Returns:
+        schema_user.Token: The authentication token.
+    """
     return user_service.login_authenticated_user(db, email=form_data.username.lower(), password=form_data.password)

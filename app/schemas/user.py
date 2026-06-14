@@ -1,3 +1,8 @@
+"""
+Pydantic schemas for the user domain.
+
+This module contains schemas used to represent, create, and update application users.
+"""
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -7,6 +12,15 @@ from app.core.enums import UserRole
 #landlords
 
 class UserBase(BaseModel):
+    """
+    Base schema for a user.
+
+    Attributes:
+        first_name (str): The user's first name.
+        last_name (str): The user's last name.
+        email (EmailStr): The user's email address.
+        phone_no (str): The user's phone number.
+    """
     first_name: str
     last_name: str
     email: EmailStr

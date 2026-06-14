@@ -30,12 +30,12 @@ def test_landlord_dashboard_pagination_skip_returns_200(authenticated_landlord_c
     Asserts that passing skip=2 properly offsets the returned room arrays.
     """
     lodge_id, db_stats = add_dashboard_stats
-    
+
     response = authenticated_landlord_client.get(url=f'{dashboard_url}/me/landlord/{lodge_id}?skip=2')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
-    
+
     total_rooms_in_arrays = (
         len(data['occupied_rooms_lease']['safe']) +
         len(data['occupied_rooms_lease']['expiring']) +
@@ -59,7 +59,7 @@ def test_landlord_dashboard_pagination_limit_returns_200(authenticated_landlord_
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
-    
+
     total_rooms_in_arrays = (
         len(data['occupied_rooms_lease']['safe']) +
         len(data['occupied_rooms_lease']['expiring']) +
@@ -82,7 +82,7 @@ def test_landlord_dashboard_pagination_exceed_limit_returns_200(authenticated_la
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
-    
+
     total_rooms_in_arrays = (
         len(data['occupied_rooms_lease']['safe']) +
         len(data['occupied_rooms_lease']['expiring']) +
@@ -105,7 +105,7 @@ def test_landlord_dashboard_pagination_exceed_limit_returns_200(authenticated_la
 def test_landlord_dashboard_filter_room_status_returns_200(authenticated_landlord_client, add_dashboard_stats):
     """
     Tests the room status filtering parameter.
-    When querying for VACANT rooms, it ensures only vacant rooms are returned in the grids, 
+    When querying for VACANT rooms, it ensures only vacant rooms are returned in the grids,
     and all other status arrays are entirely empty.
     """
     lodge_id, db_stats = add_dashboard_stats
@@ -127,7 +127,7 @@ def test_landlord_dashboard_filter_room_status_returns_200(authenticated_landlor
 def test_landlord_dashboard_filter_multiple_combo_returns_200(authenticated_landlord_client, add_dashboard_stats):
     """
     Tests passing mutually exclusive multi-select filters simultaneously.
-    When querying for VACANT (room status) and OWING (financial status), 
+    When querying for VACANT (room status) and OWING (financial status),
     it ensures both conditions are processed as OR conditions, returning both sets.
     """
     lodge_id, db_stats = add_dashboard_stats
@@ -135,7 +135,7 @@ def test_landlord_dashboard_filter_multiple_combo_returns_200(authenticated_land
     response = authenticated_landlord_client.get(
         url=f'{dashboard_url}/me/landlord/{lodge_id}',
         params={
-            'room_statuses': [RoomStatus.VACANT.value],
+            'room_statuses': ['Vacant'],
             'financial_filters': ['Owing']
         }
     )
@@ -150,7 +150,7 @@ def test_landlord_dashboard_filter_multiple_combo_returns_200(authenticated_land
 
 def test_landlord_dashboard_unauthorized_snooper_returns_404(authenticated_landlord_client, add_diff_landlord_lodge):
     """
-    Tests the authorization edge case where a landlord attempts to fetch dashboard stats 
+    Tests the authorization edge case where a landlord attempts to fetch dashboard stats
     for a lodge_id they do not own. It must return a 404 Not Found.
     """
     lodge_id = add_diff_landlord_lodge.id

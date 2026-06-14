@@ -1,3 +1,8 @@
+"""
+API routes for managing rooms.
+
+Provides endpoints for landlords to create, retrieve, and update rooms within their lodges.
+"""
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from app.crud.room import crud_room
@@ -17,6 +22,18 @@ def get_landlord_rooms(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
+    """
+    Retrieve all rooms for lodges owned by the authenticated landlord.
+
+    Args:
+        skip (Optional[int]): Number of records to skip.
+        limit (Optional[int]): Maximum number of records to return.
+        db (Session): The database session.
+        landlord_user (User): The authenticated landlord user.
+
+    Returns:
+        List[schema_room.RoomResponse]: A list of rooms.
+    """
     return room_service.get_lodge_rooms(
         db,
         landlord_id=landlord_user.id,
@@ -31,6 +48,17 @@ def create_room(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
+    """
+    Create a new room in a specific lodge owned by the landlord.
+
+    Args:
+        room_in (schema_room.RoomCreate): The room data to create.
+        db (Session): The database session.
+        landlord_user (User): The authenticated landlord user.
+
+    Returns:
+        schema_room.RoomResponse: The created room.
+    """
     return room_service.create_room_for_lodge(
         db=db, room_in=room_in,
         landlord_id=landlord_user.id
@@ -43,6 +71,17 @@ def get_room(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    """
+    Retrieve details of a specific room by its ID.
+
+    Args:
+        room_id (int): The ID of the room.
+        db (Session): The database session.
+        current_user (User): The authenticated user.
+
+    Returns:
+        schema_room.RoomResponse: The retrieved room.
+    """
     room = room_service.get_room_details(db, landlord_id=current_user.id, room_id=room_id)
     return room
 
@@ -54,6 +93,18 @@ def update_room_by_id(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
+    """
+    Update details of a specific room.
+
+    Args:
+        room_id (int): The ID of the room to update.
+        update_data (schema_room.RoomUpdate): The updated room data.
+        db (Session): The database session.
+        landlord_user (User): The authenticated landlord user.
+
+    Returns:
+        schema_room.RoomResponse: The updated room.
+    """
     updated_room = room_service.update_room_details(
         db, room_id=room_id,
         update_data=update_data,

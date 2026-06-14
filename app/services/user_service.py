@@ -1,3 +1,8 @@
+"""
+Module providing user-related business logic.
+
+This module contains services for managing users, including authentication.
+"""
 from sqlalchemy.orm import Session
 
 from app.crud.user import crud_user
@@ -12,6 +17,16 @@ def sign_up_landlord(
         db: Session,
         landlord_data: UserCreate,
 )-> User:
+    """
+    Sign up a new landlord.
+
+    Args:
+        db (Session): The database session.
+        landlord_data (UserCreate): The data for the new landlord.
+
+    Returns:
+        User: The newly created user.
+    """
     user = crud_user.get_user_by_email(db, email=landlord_data.email)
 
     if user:
@@ -31,6 +46,14 @@ def sign_up_landlord(
 def authenticate_user(db: Session, email: str, password: str):
     """
     Authenticates a user by checking their email and password.
+
+    Args:
+        db (Session): The database session.
+        email (str): The email address of the user.
+        password (str): The plain text password.
+
+    Returns:
+        User: The authenticated user object.
     """
     user = crud_user.get_user_by_email(db, email=email)
     if not user:
@@ -47,6 +70,17 @@ def login_authenticated_user(
         email: str,
         password: str
 ):
+    """
+    Log in an authenticated user and generate an access token.
+
+    Args:
+        db (Session): The database session.
+        email (str): The email address of the user.
+        password (str): The plain text password.
+
+    Returns:
+        dict: A dictionary containing the access token and token type.
+    """
     authenticated_user = authenticate_user(db, email=email, password=password)
 
     if not authenticated_user:

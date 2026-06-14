@@ -1,3 +1,9 @@
+"""
+SQLAlchemy models for the lease domain.
+
+This module contains the Lease model which represents a rental agreement
+between a tenant and a landlord for a specific room.
+"""
 from datetime import date, datetime
 from app.core.enums import LeaseStatus
 from app.db.session import Base
@@ -13,6 +19,22 @@ if TYPE_CHECKING:
 
 
 class Lease(Base):
+    """
+    Represents a lease agreement for a room.
+
+    Attributes:
+        id (int): Primary key.
+        tenant_id (int): Foreign key to the tenant profile.
+        room_id (int): Foreign key to the room being leased.
+        start_date (date): The start date of the lease.
+        end_date (date): The end date of the lease.
+        agreed_rent_amt (int): The agreed rental amount for the lease duration.
+        status (LeaseStatus): The current status of the lease (e.g., ACTIVE, EXPIRED).
+        tenant (TenantProfile): Relationship to the tenant profile.
+        room (Room): Relationship to the leased room.
+        created_at (datetime): Timestamp when the lease was created.
+        payments (list[Payment]): Relationship to the payments made under this lease.
+    """
     __tablename__ = 'leases'
 
     id: Mapped[int] = mapped_column(primary_key=True)
