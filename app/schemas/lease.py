@@ -54,5 +54,6 @@ class OccupiedRoomLeasesResponse(BaseModel):
     safe: list[RoomGridSummary]
     expiring: list[RoomGridSummary]
     overdue: list[RoomGridSummary]
+    pending: list[RoomGridSummary]
     owing: list[RoomGridSummary]
 

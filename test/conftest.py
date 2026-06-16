@@ -309,7 +309,9 @@ def maintenance_rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, ad
 
     return db_maintenance_rooms
 
-
+@pytest.fixture
+def lease_statuses():
+    return [status for status in LeaseStatus]
 
 @pytest.fixture
 def vacant_rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, add_lodge_to_db):
@@ -453,15 +455,17 @@ def add_active_lease_to_db(test_db, lease_schema_factory,add_room_to_db, add_ten
     )
 
 @pytest.fixture
-def add_expired_lease_to_db(test_db, lease_schema_factory, add_landlord_to_db, add_tenant_to_db, add_room_to_db):
+def add_overdue_lease_to_db(test_db, lease_schema_factory, add_landlord_to_db, add_lodge_to_db,
+                            add_tenant_to_db, add_room_to_db):
     """
-    Fixture to create and add an expired lease to the database.
+
+    Fixture to create and add an overdue lease to the database.
     """
     tenant_id = add_tenant_to_db.id
     room_id = add_room_to_db.id
     return lease_services.create_new_lease(
         db=test_db,
-        lease_data=lease_schema_factory(status=LeaseStatus.EXPIRED, room_id=room_id, tenant_id=tenant_id),
+        lease_data=lease_schema_factory(status=LeaseStatus.OVERDUE, room_id=room_id, tenant_id=tenant_id),
         landlord_user=add_landlord_to_db
     )
 
@@ -512,7 +516,7 @@ def add_active_lease_to_diff_landlord_lodge(test_db, lease_schema_factory, add_d
     )
 
 @pytest.fixture
-def leases_in_db(test_db, lease_schema_factory, add_landlord_to_db, tenants_in_db, vacant_rooms_in_db):
+def leases_in_db(test_db, lease_schema_factory, lease_statuses, add_landlord_to_db, tenants_in_db, vacant_rooms_in_db):
     """
     A pytest fixture that adds multiple leases to the database.
     It creates a mix of ACTIVE and INACTIVE leases.
@@ -524,9 +528,8 @@ def leases_in_db(test_db, lease_schema_factory, add_landlord_to_db, tenants_in_d
     for i in range(num_leases_to_create):
         tenant = tenants_in_db[i]
         room = vacant_rooms_in_db[i]
-        
-        # Make every 3rd lease INACTIVE for testing status filters
-        status = LeaseStatus.EXPIRED if i % 3 == 0 else LeaseStatus.ACTIVE
+
+        status = random.choice(lease_statuses)
 
         lease_data = lease_schema_factory(
             tenant_id=tenant.id,
@@ -546,11 +549,12 @@ def leases_in_db(test_db, lease_schema_factory, add_landlord_to_db, tenants_in_d
         f"\n--- Fixture: leases_in_db created {len(db_leases)} tenants. First ID: {db_leases[0].id}, Last ID: {db_leases[-1].id} ---")
     return db_leases
 
+
 @pytest.fixture
 def tenant_lease_history_in_db(test_db, lease_schema_factory, add_landlord_to_db, add_tenant_to_db, room_schema_factory, add_lodge_to_db):
     """
     Fixture to create a history of leases for a single tenant.
-    Creates 3 EXPIRED leases and 2 ACTIVE leases.
+    Creates 3 EXPIRED leases and 2 OVERDUE leases.
     """
     tenant = add_tenant_to_db
     db_leases = []
@@ -566,15 +570,15 @@ def tenant_lease_history_in_db(test_db, lease_schema_factory, add_landlord_to_db
         )
         new_room = room_service.create_room_for_lodge(test_db, landlord_id=add_landlord_to_db.id, room_in=rm_schema)
         
-        # Create 3 EXPIRED and 2 ACTIVE leases
-        status = LeaseStatus.EXPIRED if i < 3 else LeaseStatus.ACTIVE
+        # Create 3 OVERDUE and 2 ACTIVE leases
+        status = LeaseStatus.OVERDUE if i < 3 else LeaseStatus.ACTIVE
         
         lease_data = lease_schema_factory(
             tenant_id=tenant.id,
             room_id=new_room.id,
             agreed_rent_amt=new_room.base_rent_price,
-            start_date=date.today() - timedelta(days=365 * (i+1)) if status == LeaseStatus.EXPIRED else date.today() - timedelta(days=20 * (i + 1)),# Start date in the past
-            end_date=date.today() - timedelta(days=365 * i) if status == LeaseStatus.EXPIRED else (date.today() - timedelta(days=20 * (i + 1)))+ timedelta(days=365),
+            start_date=date.today() - timedelta(days=365 * (i+1)) if status == LeaseStatus.OVERDUE else date.today() - timedelta(days=20 * (i + 1)),# Start date in the past
+            end_date=date.today() - timedelta(days=365 * i) if status == LeaseStatus.OVERDUE else (date.today() - timedelta(days=20 * (i + 1))) + timedelta(days=365),
             status=status
         )
         
@@ -700,27 +704,67 @@ def tenant_safe_payments_in_db(test_db, payment_schema_factory, add_landlord_to_
 
 
 @pytest.fixture
-def add_dashboard_stats(test_db,leases_in_db, add_lodge_to_db, add_landlord_to_db, payment_schema_factory, maintenance_rooms_in_db):
-
+def add_dashboard_stats(test_db, add_lodge_to_db, add_landlord_to_db, room_schema_factory, tenant_schema_factory, lease_schema_factory, payment_schema_factory):
     lodge_id = add_lodge_to_db.id
+    landlord_id = add_landlord_to_db.id
+    
+    room_counter = 1
+    
+    def _create_room_with_scenario(scenario: str):
+        nonlocal room_counter
 
-    for lease in leases_in_db:
-        if lease.status == LeaseStatus.ACTIVE:
+        room_no = f'test rm {room_counter}'
 
-            already_paid = crud_payment.get_payments_aggregate_by_lease_id(test_db, lease_id=lease.id)
-            remaining_balance = lease.agreed_rent_amt - already_paid
+        room_data = room_schema_factory(room_no=room_no, base_rent_price=5000, lodge_id=lodge_id, status=RoomStatus.VACANT)
+        room = room_service.create_room_for_lodge(test_db, room_in=room_data, landlord_id=landlord_id)
+        
+        if scenario == "MAINTENANCE":
+            room.status = RoomStatus.MAINTENANCE
+            test_db.commit()
+            room_counter += 1
+            return
+        elif scenario == "VACANT":
+            room_counter += 1
+            return
+        
+        t_schema = tenant_schema_factory(first_name=f"{scenario}{room_counter}", email=f"t{room_counter}@test.com", lodge_id=lodge_id)
+        tenant = tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
+        
+        start_date = date.today() - timedelta(days=100)
+        end_date = date.today() + timedelta(days=100)
+        status = LeaseStatus.ACTIVE
+        total_paid = 5000
+        
+        if scenario == "SAFE":
+            end_date = date.today() + timedelta(days=100)
+        elif scenario == "EXPIRING":
+            end_date = date.today() + timedelta(days=45)
+        elif scenario == "OVERDUE":
+            end_date = date.today() - timedelta(days=10)
+        elif scenario == "PENDING":
+            status = LeaseStatus.PENDING_TERMINATION
+        elif scenario == "OWING":
+            total_paid = 2000
+        elif scenario == "PENDING_OWING":
+            status = LeaseStatus.PENDING_TERMINATION
+            total_paid = 2000
+            
+        lease_data = lease_schema_factory(tenant_id=tenant.id, room_id=room.id, agreed_rent_amt=5000, total_amt_paid=total_paid, start_date=start_date, end_date=end_date, status=status)
+        lease_services.create_new_lease(test_db, lease_data=lease_data, landlord_user=add_landlord_to_db)
+        
+        room_counter += 1
 
-            min_payment = min(remaining_balance, 20000)
-            payment_amt = remaining_balance if lease.id % 2 == 0 else random.randint(min_payment, remaining_balance)
-            payment_data = payment_schema_factory(
-                lease_id=lease.id,
-                amount_paid=payment_amt
-            )
-            payment_service.add_payment_record(
-                test_db,
-                current_landlord_id=add_landlord_to_db.id,
-                payment_data=payment_data
-            )
+    scenarios = ["VACANT", "MAINTENANCE", "SAFE", "EXPIRING", "OVERDUE", "OWING"]
+    for sc in scenarios:
+        for _ in range(3):
+            _create_room_with_scenario(sc)
+            
+    for _ in range(2):
+        _create_room_with_scenario("PENDING")
+        
+    for _ in range(1):
+        _create_room_with_scenario("PENDING_OWING")
+
     all_filters = DashboardFilters(
         room_status_filters=[],
         financial_filters=[]
@@ -728,7 +772,7 @@ def add_dashboard_stats(test_db,leases_in_db, add_lodge_to_db, add_landlord_to_d
     db_landlord_dashboard_stats = dashboard_service.get_landlord_dashboard(
         test_db,
         lodge_id=lodge_id,
-        landlord_id=add_landlord_to_db.id,
+        landlord_id=landlord_id,
         filter_by=all_filters
     )
     return lodge_id, db_landlord_dashboard_stats

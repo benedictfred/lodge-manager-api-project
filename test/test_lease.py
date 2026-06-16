@@ -3,6 +3,7 @@ from fastapi import status
 from datetime import timedelta
 
 from app.core.enums import LeaseStatus
+from app.models.lease import Lease
 from test.conftest import base_url, add_lodge_to_db
 
 lease_url = f'{base_url}/leases'
@@ -150,7 +151,7 @@ def test_landlord_get_leases_pagination_skip_exceeds_total_returns_200(authentic
 
 @pytest.mark.parametrize("status_filter", [
     LeaseStatus.ACTIVE,
-    LeaseStatus.EXPIRED
+    LeaseStatus.OVERDUE
 ])
 def test_landlord_get_leases_pagination_with_status_filter_returns_200(authenticated_landlord_client, leases_in_db, add_lodge_to_db, status_filter):
     """
@@ -271,7 +272,7 @@ def test_tenant_get_personal_lease_history_skip_exceeds_total(auth_client_factor
 
 @pytest.mark.parametrize("status_filter", [
     LeaseStatus.ACTIVE,
-    LeaseStatus.EXPIRED
+    LeaseStatus.OVERDUE
 ])
 def test_tenant_get_personal_lease_history_with_status_filter_returns_200(auth_client_factory, tenant_lease_history_in_db, status_filter):
     """
@@ -332,15 +333,12 @@ def test_landlord_terminate_non_existent_lease_returns_404(authenticated_landlor
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert data['detail'] == 'Lease could not be found'
 
-@pytest.mark.parametrize("fixture_name", [
-    "add_terminated_lease_to_db",
-    "add_expired_lease_to_db"
-])
-def test_landlord_terminate_invalid_status_lease_returns_400(authenticated_landlord_client, request, fixture_name):
+
+def test_landlord_terminate_already_terminated_lease_status_lease_returns_400(authenticated_landlord_client, add_terminated_lease_to_db):
     """
     Tests that a landlord cannot terminate a lease that is already TERMINATED or EXPIRED.
     """
-    lease = request.getfixturevalue(fixture_name)
+    lease = add_terminated_lease_to_db
     response = authenticated_landlord_client.patch(f'{lease_url}/terminate/{lease.id}')
     data = response.json()
 
@@ -398,21 +396,38 @@ def test_tenant_appeal_lease_not_owned_returns_404(auth_client_factory, add_seco
     assert data['detail'] == 'Lease could not be found'
 
 @pytest.mark.parametrize("fixture_name", [
-    "add_terminated_lease_to_db",
-    "add_expired_lease_to_db",
-    "add_pending_termination_lease_to_db"
+
+    "add_overdue_lease_to_db",
+    "add_active_lease_to_db"
 ])
-def test_tenant_appeal_invalid_status_lease_returns_400(authenticated_tenant_client, request, fixture_name):
+def test_tenant_can_appeal_valid_status_lease_returns_400(authenticated_tenant_client, request, fixture_name):
     """
-    Tests that a tenant cannot appeal a lease that is already TERMINATED, EXPIRED, or PENDING_TERMINATION.
+    Tests that a tenant can appeal a lease that is already ACTIVE, OVERDUE
     """
     lease = request.getfixturevalue(fixture_name)
     
     response = authenticated_tenant_client.patch(f'{lease_url}/me/terminate/{lease.id}')
     data = response.json()
+    print(data)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert  data['status'] == LeaseStatus.PENDING_TERMINATION
+
+@pytest.mark.parametrize('fixture_name', [
+    'add_terminated_lease_to_db',
+    'add_pending_termination_lease_to_db'
+])
+def test_tenant_appeal_invalid_status_lease_returns_400(authenticated_tenant_client, request, fixture_name):
+    lease = request.getfixturevalue(fixture_name)
+    fixture_status_value = lease.status.value
+
+    response = authenticated_tenant_client.patch(f'{lease_url}/me/terminate/{lease.id}')
+    data = response.json()
+    print(data)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert  data['detail'] == f"Lease is already {lease.status.value}"
+    assert data['detail'] == f"Lease is already {fixture_status_value}"
+
 
 # --- Cross-Role Authorization Tests ---
 
@@ -427,7 +442,7 @@ def test_tenant_cannot_create_lease_returns_403(authenticated_tenant_client, moc
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert data['detail'] == 'Only landlords are allowed.'
 
-def test_tenant_cannot_terminate_lease_returns_403(authenticated_tenant_client, add_active_lease_to_db):
+def test_tenant_cannot_terminate_lease_via_landlord_endpoint_returns_403(authenticated_tenant_client, add_active_lease_to_db):
     """
     Tests that a tenant cannot access the landlord's endpoint for terminating a lease.
     """

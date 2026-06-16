@@ -83,25 +83,28 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
 
         stmt = (select(
             Lease.id.label('lease_id'),
+            Room.id.label('room_id'),
             Room.room_no.label('room_no'),
             case(
-                (and_(*const.filter_menu.get(BadgeTexts.SAFE)), BadgeTexts.SAFE),
-                (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeTexts.EXPIRING),
-                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeTexts.OVERDUE),
-                (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeTexts.OWING),
-                (const.vacant_expr, RoomStatus.VACANT),
-                (const.maintenance_expr, RoomStatus.MAINTENANCE),
-                else_=BadgeTexts.UNKNOWN_BADGE_TEXT
+                (and_(*const.filter_menu.get(BadgeTexts.PENDING)), BadgeTexts.PENDING.value),
+                (and_(*const.filter_menu.get(BadgeTexts.SAFE)), BadgeTexts.SAFE.value),
+                (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeTexts.EXPIRING.value),
+                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeTexts.OVERDUE.value),
+                (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeTexts.OWING.value),
+                (const.vacant_expr, RoomStatus.VACANT.value),
+                (const.maintenance_expr, RoomStatus.MAINTENANCE.value),
+                else_=BadgeTexts.UNKNOWN_BADGE_TEXT.value
             ).label('badge_text'),
 
             case(
-                (and_(*const.filter_menu.get(BadgeTexts.SAFE)), BadgeVariants.SUCCESS),
-                (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeVariants.WARNING),
-                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeVariants.DANGER),
-                (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeVariants.INFO),
-                (const.vacant_expr, BadgeVariants.INACTIVE),
-                (const.maintenance_expr, BadgeVariants.NEED_REPAIR),
-                else_= BadgeVariants.UNKNOWN_VARIANT
+                (and_(*const.filter_menu.get(BadgeTexts.PENDING)), BadgeVariants.PURPLE.value),
+                (and_(*const.filter_menu.get(BadgeTexts.SAFE)), BadgeVariants.SUCCESS.value),
+                (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeVariants.WARNING.value),
+                (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeVariants.ORANGE.value),
+                (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeVariants.DANGER.value),
+                (const.vacant_expr, BadgeVariants.INFO.value),
+                (const.maintenance_expr, BadgeVariants.INACTIVE.value),
+                else_= BadgeVariants.UNKNOWN_VARIANT.value
             ).label('badge_variant'),
 
             case(
@@ -120,21 +123,27 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
                 (const.maintenance_expr, 'Under Maintenance'),
                 else_='Invalid'
             ).label('sub_display_text'),
+            
+            (and_(*const.filter_menu.get(BadgeTexts.OWING))).label('is_owing')
 
         ).select_from(
             Room
         ).outerjoin(
-            Lease, and_(Lease.room_id == Room.id, Lease.status == LeaseStatus.ACTIVE)
+            Lease, and_(
+                Room.id == Lease.room_id,
+                Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
+            )
         ).outerjoin(
             TenantProfile, Lease.tenant_id == TenantProfile.id
         ).outerjoin(
             User, TenantProfile.user_id == User.id
         ).outerjoin(
-            const.payment_subq, const.payment_subq.c.lease_id == Lease.id
+            const.PAYMENT_SUBQ, const.PAYMENT_SUBQ.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id
         ).group_by(
             Lease.id,
+            Room.id,
             User.first_name,
             User.last_name,
             Room.room_no,

@@ -32,7 +32,6 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         Returns:
             User: The found user or None.
         """
-        print(f'User input email: {email}')
         return db.query(self.model).filter(self.model.email == email).first()
 
 

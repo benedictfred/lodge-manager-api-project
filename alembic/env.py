@@ -18,7 +18,6 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-# from app.models.user import  LandLord
 
 from app.db import base
 from app.models.lease import Lease

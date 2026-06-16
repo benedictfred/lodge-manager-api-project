@@ -48,13 +48,13 @@ def test_landlord_create_payment_lease_not_owned_returns_404(authenticated_landl
     assert data['detail'] == 'Room could not be found'
 
 @pytest.mark.parametrize("fixture_name", [
-    "add_expired_lease_to_db",
-    "add_terminated_lease_to_db",
+    "add_overdue_lease_to_db",
+    "add_active_lease_to_db",
     "add_pending_termination_lease_to_db"
 ])
-def test_landlord_create_payment_inactive_lease_returns_400(authenticated_landlord_client, request, fixture_name):
+def test_landlord_create_payment_for_valid_lease_returns_200(authenticated_landlord_client, request, fixture_name):
     """
-    Tests that a landlord cannot create a payment for an inactive lease.
+    Tests that a landlord can create a payment for an valid lease status (active, overdue, pending)
     """
     lease = request.getfixturevalue(fixture_name)
     payload = {
@@ -64,8 +64,24 @@ def test_landlord_create_payment_inactive_lease_returns_400(authenticated_landlo
     response = authenticated_landlord_client.post(f'{payment_url}/create-payment', json=payload)
     data = response.json()
 
+    assert response.status_code == status.HTTP_200_OK
+    assert data['amount_paid'] == payload['amount_paid']
+    assert data['lease_id'] == lease.id
+    assert 'id' in data
+    assert 'payment_date' in data
+
+def test_landlord_create_payment_for_terminated_lease_returns_400(authenticated_landlord_client, add_terminated_lease_to_db):
+    lease = add_terminated_lease_to_db
+
+    payload = {
+        "amount_paid": 5000,
+        "lease_id": lease.id
+    }
+    response = authenticated_landlord_client.post(f'{payment_url}/create-payment', json=payload)
+    data = response.json()
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert f"Lease is already {lease.status.value}" in data['detail']
+    assert f'Lease is already {LeaseStatus.TERMINATED.value}' in data['detail']
 
 def test_landlord_create_payment_exceeds_agreed_rent_returns_400(authenticated_landlord_client, mock_payment_schema, add_active_lease_to_db):
     """

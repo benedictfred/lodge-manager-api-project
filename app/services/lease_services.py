@@ -14,7 +14,7 @@ from app.schemas.lease import LeaseCreate, LeaseUpdate
 from app.services import lodge_service, room_service
 from app.crud.lease import crud_lease
 from app.core.exceptions import (RoomNotFoundError, UserNotFoundError,
-                                  LeaseNotFoundError,  InvalidLeaseActionError)
+                                 LeaseNotFoundError, InvalidLeaseActionError)
 
 
 def create_new_lease(
@@ -82,7 +82,7 @@ def get_filtered_landlord_leases(
 
     return filter_leases(
         db,
-        lodge_id = lodge_id,
+        lodge_id=lodge_id,
         tenant_id=tenant_id,
         room_id=room_id,
         skip=skip,
@@ -90,8 +90,9 @@ def get_filtered_landlord_leases(
         status=status
     )
 
+
 def get_filtered_leases_tenant(
-db: Session,
+        db: Session,
         tenant_profile: TenantProfile,
         skip: Optional[int] = None,
         max_limit: Optional[int] = None,
@@ -161,6 +162,7 @@ def filter_leases(
         skip=skip
     )
 
+
 def verify_lease_to_terminate(
         db: Session,
         lease_id: int,
@@ -177,14 +179,16 @@ def verify_lease_to_terminate(
         Lease: The verified lease.
     """
     lease = crud_lease.get(db, item_id=lease_id)
-    if not lease :
+
+    if not lease:
         raise LeaseNotFoundError()
 
-    # don't terminate a lease if it has already been terminated or is expired
-    if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.EXPIRED]:
+    # don't terminate a lease if it has already been terminated
+    if lease.status == LeaseStatus.TERMINATED:
         raise InvalidLeaseActionError(status=lease.status)
 
     return lease
+
 
 def terminate_lease(
         db: Session,
@@ -212,6 +216,7 @@ def terminate_lease(
 
     return crud_lease.lease_terminate(db, db_lease=lease)
 
+
 def update_lease_details(
         db: Session,
         lease_id: int,
@@ -232,16 +237,17 @@ def update_lease_details(
     """
     lease = crud_lease.get(db, item_id=lease_id)
 
-    if not lease :
+    if not lease:
         return LeaseNotFoundError()
 
-    if lease.room.lodge.landlord_id !=  landlord_id:
+    if lease.room.lodge.landlord_id != landlord_id:
         return LeaseNotFoundError()
 
     return crud_lease.update_lease(db, db_lease=lease, lease_data=update_data)
 
+
 def appeal_for_lease_termination(
-        db:Session,
+        db: Session,
         lease_id: int,
         tenant_id: int
 ):
@@ -262,10 +268,11 @@ def appeal_for_lease_termination(
     if not verify_tenant_owns_lease(lease=lease, tenant_id=tenant_id):
         raise LeaseNotFoundError()
 
-    if lease.status in [LeaseStatus.TERMINATED, LeaseStatus.PENDING_TERMINATION, LeaseStatus.EXPIRED]:
+    if lease.status == LeaseStatus.PENDING_TERMINATION:
         raise InvalidLeaseActionError(status=lease.status)
 
     return crud_lease.request_terminate_lease(db, db_lease=lease)
+
 
 def verify_tenant_owns_lease(lease: Lease, tenant_id: int):
     """

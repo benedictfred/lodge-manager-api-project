@@ -54,7 +54,7 @@ class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfi
             db.rollback()
             raise e
 
-    def get_tenants(self, db: Session, lodge_id: int, skip: int = 0, max_limit=50) -> list[type[TenantProfile]]:
+    def get_tenants(self, db: Session, lodge_id: int, skip: int = 0, max_limit:int =50) -> list[type[TenantProfile]]:
         """
         Get a list of tenants in a specific lodge.
 

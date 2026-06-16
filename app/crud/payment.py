@@ -13,10 +13,16 @@ from app.models.room import Room
 from app.schemas.dashboard import DashboardFilters
 from app.schemas.payment import PaymentCreate, PaymentResponse
 from app.crud.base_crud import CRUDBase
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 
 from utilities.dashboard_utilities import apply_dashboard_filters
 
+total_payment_expr = func.coalesce(func.sum(Payment.amount_paid), 0)
+
+PAYMENT_SUBQ = select(
+    Payment.lease_id,
+    total_payment_expr.label('total_amt_paid')
+).group_by(Payment.lease_id).subquery()
 
 class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
     """
@@ -63,24 +69,27 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         Returns:
             int: The potential revenue from all rooms.
         """
-        stmt = select(func.coalesce(func.sum(Room.base_rent_price), 0).label('potential_revenue')).where(Room.lodge_id == lodge_id)
+        stmt = select(
+            func.coalesce(func.sum(Room.base_rent_price), 0).label('potential_revenue')
+        ).where(
+            Room.lodge_id == lodge_id
+        )
 
         return db.execute(stmt).scalar()
 
-    def get_payment_subq(self):
-        """
-        Create a subquery for aggregated payment amounts per lease.
 
-        Returns:
-            Subquery: The SQLAlchemy subquery object.
-        """
-        total_payment_expr = func.coalesce(func.sum(Payment.amount_paid), 0)
-        payment_subq = select(
-            Payment.lease_id,
-            total_payment_expr.label('total_amt_paid')
-        ).group_by(Payment.lease_id).subquery()
+    def get_financial_for_forecasted_empty_rooms(self, db: Session, lodge_id: int, filter_by: DashboardFilters):
 
-        return payment_subq
+        stmt = select(
+            func.coalesce(func.sum(Room.base_rent_price), 0).label('forecasted_revenue')
+        ).where(
+            Room.lodge_id == lodge_id,
+            or_(constants.vacant_expr, constants.maintenance_expr)
+
+        )
+
+        stmt = apply_dashboard_filters(filter_by=filter_by,filters=constants.filter_menu, stmt=stmt)
+        return db.execute(stmt).scalar()
 
     def get_financials_for_active_leases(self, db: Session, lodge_id: int, filter_by: DashboardFilters):
         """
@@ -94,21 +103,21 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         Returns:
             RowMapping: The expected and collected revenue.
         """
-        payment_subq = self.get_payment_subq()
 
         expected_revenue_expr = func.coalesce(func.sum(Lease.agreed_rent_amt), 0)
-        collected_revenue_expr = func.coalesce(func.sum(payment_subq.c.total_amt_paid), 0)
+        collected_revenue_expr = func.coalesce(func.sum(PAYMENT_SUBQ.c.total_amt_paid), 0)
 
         stmt = (select(
             expected_revenue_expr.label('expected_revenue'),
             collected_revenue_expr.label('collected_revenue')
 
         ).select_from(Lease).outerjoin(
-            payment_subq, payment_subq.c.lease_id == Lease.id
+            PAYMENT_SUBQ, PAYMENT_SUBQ.c.lease_id == Lease.id
         ).join(
             Room, Room.id == Lease.room_id
         ).where(
-            Room.lodge_id == lodge_id, Lease.status == LeaseStatus.ACTIVE
+            Room.lodge_id == lodge_id,
+            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
         ))
 
         stmt = apply_dashboard_filters(filter_by=filter_by, stmt=stmt, filters=constants.filter_menu)
@@ -127,21 +136,21 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         Returns:
             int: The total unpaid rent amount.
         """
-        payment_subq = self.get_payment_subq()
+
         agreed_rent_expr = func.coalesce(func.sum(Lease.agreed_rent_amt), 0)
-        total_paid_expr = func.coalesce(func.sum(payment_subq.c.total_amt_paid), 0)
+        total_paid_expr = func.coalesce(func.sum(PAYMENT_SUBQ.c.total_amt_paid), 0)
 
         stmt = select(
             (agreed_rent_expr - total_paid_expr).label('unpaid_rent')
         ).select_from(
             Lease
         ).outerjoin(
-            payment_subq, payment_subq.c.lease_id == Lease.id
+            PAYMENT_SUBQ, PAYMENT_SUBQ.c.lease_id == Lease.id
         ).join(
             Room, Lease.room_id == Room.id
         ).where(
             Room.lodge_id == lodge_id,
-            Lease.status == LeaseStatus.ACTIVE
+            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
         )
 
         stmt = apply_dashboard_filters(filter_by=filter_by, stmt=stmt, filters=constants.filter_menu)

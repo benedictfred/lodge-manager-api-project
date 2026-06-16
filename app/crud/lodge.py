@@ -160,18 +160,25 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             )
         )
 
+        pending_count_expr = func.count(
+            case(
+                (and_(*const.filter_menu.get(BadgeTexts.PENDING)), 1), else_=None
+            )
+        )
+
         stmt = select(
             safe_count_expr.label('safe'),
             expiring_count_expr.label('expiring'),
             overdue_expr.label('overdue'),
+            pending_count_expr.label('pending'),
             owing_count_expr.label('owing')
         ).select_from(Lease).outerjoin(
             Room, Lease.room_id == Room.id
         ).outerjoin(
-            const.payment_subq, const.payment_subq.c.lease_id == Lease.id
+            const.PAYMENT_SUBQ, const.PAYMENT_SUBQ.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id,
-            Lease.status == LeaseStatus.ACTIVE,
+            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION]),
             Room.status == RoomStatus.OCCUPIED
         )
 

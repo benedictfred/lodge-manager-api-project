@@ -40,6 +40,7 @@ class OccupiedCounts(BaseModel):
     safe: int
     expiring: int
     overdue: int
+    pending: int
     owing: int
 
 

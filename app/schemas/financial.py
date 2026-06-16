@@ -18,6 +18,7 @@ class FinancialResponse(BaseModel):
         unpaid_rent (int): The amount of rent that is unpaid.
     """
     potential_revenue: int
+    forecasted_revenue: int
     expected_revenue: int
     collected_revenue: int
     unpaid_rent: int

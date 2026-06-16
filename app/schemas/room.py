@@ -61,11 +61,13 @@ class RoomUpdate(BaseModel):
 
 class RoomGridSummary(BaseModel):
     lease_id: Optional[int] = None
+    room_id: int
     room_no: str
     badge_text: Union[BadgeTexts, RoomStatus]
     badge_variant: BadgeVariants
     main_display_text: str
     sub_display_text: str
+    is_owing: bool = False
 
 
 if __name__ == '__main__':

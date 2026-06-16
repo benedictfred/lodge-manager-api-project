@@ -68,6 +68,7 @@ if __name__ == "__main__":
                 'safe': 10,
                 'expiring': 10,
                 'overdue': 2,
+                'pending': 0,
                 'owing': 8
             }
         },
@@ -151,6 +152,7 @@ if __name__ == "__main__":
                     'sub_display_text': '101 days left'
                 },
             ],
+            'pending': [],
             'owing': [],
 
         },

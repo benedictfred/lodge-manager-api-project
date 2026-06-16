@@ -29,7 +29,7 @@ class StudentLevel(str, Enum):
 
 class LeaseStatus(str, Enum):
     ACTIVE = 'Active'
-    EXPIRED = 'Expired'
+    OVERDUE = 'Overdue'
     TERMINATED = 'Terminated'
     PENDING_TERMINATION = 'Pending_Termination'
 
@@ -39,13 +39,15 @@ class BadgeTexts(str, Enum):
     EXPIRING = 'Expiring'
     OVERDUE = 'Overdue'
     OWING = 'Owing'
+    PENDING = 'Pending'
     UNKNOWN_BADGE_TEXT = 'Unknown_badge_text'
 
 class BadgeVariants(str, Enum):
     SUCCESS = 'Success'
     WARNING = 'Warning'
     DANGER = 'Danger'
+    ORANGE = 'Orange'
     INACTIVE = 'Inactive'
-    NEED_REPAIR = 'Need_Repair',
     INFO = 'Info'
+    PURPLE = 'Purple'
     UNKNOWN_VARIANT = 'Unknown_variant'
