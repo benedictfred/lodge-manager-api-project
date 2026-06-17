@@ -108,3 +108,4 @@ def landlord_owns_room_lodge(room: Room, landlord_id: int):
         bool: True if the landlord owns the lodge, False otherwise.
     """
     return room.lodge.landlord_id == landlord_id
+

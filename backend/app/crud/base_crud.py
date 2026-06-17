@@ -4,6 +4,7 @@ Module providing base CRUD operations.
 This module contains a generic base class for Create, Read, Update, and Delete
 (CRUD) operations using SQLAlchemy.
 """
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import Generic, Type, TypeVar, Unpack, List, Optional
 from pydantic import BaseModel
@@ -29,7 +30,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         self.model = model
 
-    def get(self, db: Session, item_id: int) -> Optional[ModelType]:
+    def get(self, db: Session, item_id: int,  *options) -> Optional[ModelType]:
         """
         Get a single record by its ID.
 
@@ -40,7 +41,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             Optional[ModelType]: The retrieved item or None if not found.
         """
-        return db.query(self.model).filter(self.model.id == item_id).first()
+        stmt = select(self.model).where(self.model.id == item_id)
+
+        if options:
+            stmt = stmt.options(*options)
+
+        return db.execute(stmt).scalar_one_or_none()
 
     def get_multi(self, db: Session, item_id: int, skip: int = 0, limit: int = 100) -> List[ModelType]:
         """

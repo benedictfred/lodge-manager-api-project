@@ -253,13 +253,14 @@ async function openRoomSidePanel(room, colors) {
     loading.style.display = 'block';
 
     try {
-        // Fetch room details
-        const roomDetails = await apiFetch(`/rooms/${room.room_id}`);
-        document.getElementById('sp-room-type').textContent = roomDetails.description || 'N/A';
-        document.getElementById('sp-room-status').textContent = roomDetails.status || 'N/A';
-        document.getElementById('sp-room-rent').textContent = currencyFormatter.format(roomDetails.base_rent_price || 0);
-
+        // Empty Room Flow (No Lease)
         if (room.badge_text === 'Vacant' || room.badge_text === 'Maintenance' || !room.lease_id) {
+            const roomDetails = await apiFetch(`/rooms/${room.room_id}`);
+            
+            document.getElementById('sp-room-type').textContent = roomDetails.description || 'N/A';
+            document.getElementById('sp-room-status').textContent = roomDetails.status || 'N/A';
+            document.getElementById('sp-room-rent').textContent = currencyFormatter.format(roomDetails.base_rent_price || 0);
+
             loading.style.display = 'none';
             document.getElementById('sp-vacant-container').style.display = 'block';
             document.getElementById('sp-assign-tenant-btn').onclick = () => {
@@ -268,48 +269,36 @@ async function openRoomSidePanel(room, colors) {
             return;
         }
 
-        // Fetch Lease and Payments concurrently
-        const [leases, payments] = await Promise.all([
-            apiFetch(`/leases/${lodgeId}?room_id=${room.room_id}`),
-            apiFetch(`/payments/${room.lease_id}`).catch(() => []) // Catch in case no payments exist
-        ]);
+        // Occupied Room Flow (Uses your new polymorphic endpoint!)
+        const leaseInfo = await apiFetch(`/dashboard-landlord/lease-info/${room.lease_id}`);
 
-        const lease = leases.find(l => l.id === room.lease_id) || leases[0];
-        if (!lease) throw new Error("Lease not found");
+        // 1. Bind Room
+        document.getElementById('sp-room-type').textContent = leaseInfo.room.description || 'N/A';
+        document.getElementById('sp-room-status').textContent = leaseInfo.room.status || 'N/A';
+        document.getElementById('sp-room-rent').textContent = currencyFormatter.format(leaseInfo.room.base_rent || 0);
 
-        const tenant = await apiFetch(`/lodges/${lodgeId}/tenants`).then(ts => ts.find(t => t.id === lease.tenant_id));
+        // 2. Bind Lease
+        document.getElementById('sp-lease-start').textContent = new Date(leaseInfo.lease.start_date).toLocaleDateString();
+        document.getElementById('sp-lease-end').textContent = new Date(leaseInfo.lease.end_date).toLocaleDateString();
+
+        // 3. Bind Financials
+        document.getElementById('sp-fin-agreed').textContent = currencyFormatter.format(leaseInfo.finance.agreed_rent || 0);
+        document.getElementById('sp-fin-paid').textContent = currencyFormatter.format(leaseInfo.finance.total_paid || 0);
+        document.getElementById('sp-fin-balance').textContent = currencyFormatter.format(leaseInfo.finance.remaining_balance || 0);
+
+        // 4. Bind Tenant
+        document.getElementById('sp-tenant-name').textContent = leaseInfo.tenant.name || 'N/A';
+        document.getElementById('sp-tenant-contact').textContent = leaseInfo.tenant.phone || 'N/A';
+        document.getElementById('sp-tenant-avatar').textContent = (leaseInfo.tenant.name || 'T').charAt(0).toUpperCase();
 
         loading.style.display = 'none';
         document.getElementById('sp-lease-container').style.display = 'block';
-
-        // Bind Lease
-        document.getElementById('sp-lease-start').textContent = new Date(lease.start_date).toLocaleDateString();
-        document.getElementById('sp-lease-end').textContent = new Date(lease.end_date).toLocaleDateString();
-
-        // Bind Financials
-        const totalPaid = payments.reduce((sum, p) => sum + (p.amount_paid || 0), 0);
-        const balance = lease.agreed_rent_amt - totalPaid;
-
-        document.getElementById('sp-fin-agreed').textContent = currencyFormatter.format(lease.agreed_rent_amt || 0);
-        document.getElementById('sp-fin-paid').textContent = currencyFormatter.format(totalPaid);
-        document.getElementById('sp-fin-balance').textContent = currencyFormatter.format(balance);
-
-        // Bind Tenant
-        if (tenant && tenant.user) {
-            document.getElementById('sp-tenant-name').textContent = `${tenant.user.first_name} ${tenant.user.last_name}`;
-            document.getElementById('sp-tenant-contact').textContent = tenant.user.phone_no || tenant.user.email || 'N/A';
-            document.getElementById('sp-tenant-avatar').textContent = tenant.user.first_name.charAt(0).toUpperCase();
-        } else {
-            document.getElementById('sp-tenant-name').textContent = `Tenant ID: ${lease.tenant_id}`;
-            document.getElementById('sp-tenant-contact').textContent = 'N/A';
-            document.getElementById('sp-tenant-avatar').textContent = 'T';
-        }
         
         // Contextual Actions Redirects
         document.getElementById('sp-tenant-link').onclick = () => {
-            window.location.href = `tenants.html?tenant_id=${lease.tenant_id}`;
+            window.location.href = 'tenants.html';
         };
-        const paymentRedirectUrl = `payments.html?lease_id=${lease.id}`;
+        const paymentRedirectUrl = `payments.html?lease_id=${room.lease_id}`;
         document.getElementById('sp-payment-history-link').href = paymentRedirectUrl;
         document.getElementById('sp-log-payment-btn').onclick = () => {
             window.location.href = paymentRedirectUrl + '&open_modal=true';

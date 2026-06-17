@@ -82,10 +82,13 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
 
         stmt = select(
             func.coalesce(func.sum(Room.base_rent_price), 0).label('forecasted_revenue')
+        ).select_from(Room).outerjoin(
+            Lease, Lease.room_id == Room.id
+        ).outerjoin(
+            PAYMENT_SUBQ, PAYMENT_SUBQ.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id,
             or_(constants.vacant_expr, constants.maintenance_expr)
-
         )
 
         stmt = apply_dashboard_filters(filter_by=filter_by,filters=constants.filter_menu, stmt=stmt)

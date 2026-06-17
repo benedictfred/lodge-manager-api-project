@@ -4,6 +4,7 @@ Pydantic schemas for the dashboard domain.
 This module contains schemas used to structure the data for the landlord's dashboard,
 including financial summaries, entity counts, and room statuses.
 """
+from datetime import date
 from enum import Enum
 from typing import Optional, Annotated
 
@@ -12,8 +13,8 @@ from pydantic import BaseModel, ConfigDict
 from app.core.enums import BadgeTexts, BadgeVariants, RoomStatus
 from app.schemas.entity_count import EntityCountResponse
 from app.schemas.financial import FinancialResponse
-from app.schemas.lease import OccupiedRoomLeasesResponse
-from app.schemas.room import RoomGridSummary
+from app.schemas.lease import OccupiedRoomLeasesResponse, LeaseBase
+from app.schemas.room import RoomGridSummary, RoomCreate, RoomBase
 
 
 class LandlordDashboardStats(BaseModel):
@@ -46,7 +47,31 @@ class DashboardFilters(BaseModel):
     room_status_filters: list[RoomStatus]
     financial_filters: list[BadgeTexts]
 
+class RoomSummary(BaseModel):
+    description: str
+    base_rent: int
+    status: str
 
+class LeaseSummary(BaseModel):
+    start_date: date
+    end_date: date
+
+class FinancialSummary(BaseModel):
+    agreed_rent: int
+    total_paid: int
+    remaining_balance: int
+
+class TenantSummary(BaseModel):
+    name: str
+    phone: str
+
+class RoomLeaseInfo(BaseModel):
+    room: RoomSummary
+    lease: LeaseSummary
+    finance: FinancialSummary
+    tenant: TenantSummary
+
+    pass
 if __name__ == "__main__":
     mock_dashboard_stats_dict = {
         'financials': {

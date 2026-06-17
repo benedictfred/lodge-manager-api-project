@@ -3,6 +3,8 @@ Module providing room-related CRUD operations.
 
 This module contains the CRUD operations for Room models.
 """
+from typing import Sequence
+
 from app.core.enums import BadgeVariants, LeaseStatus, BadgeTexts, RoomStatus
 from app.models.lease import Lease
 from app.models.lodge import Lodge
@@ -13,7 +15,7 @@ from app.schemas.dashboard import DashboardFilters
 from app.schemas.room import RoomCreate, RoomUpdate
 from sqlalchemy.orm import Session
 from app.crud.base_crud import CRUDBase
-from sqlalchemy import select, case, and_,  func
+from sqlalchemy import select, case, and_, func, RowMapping
 from app.core import constants as const
 from utilities.dashboard_utilities import apply_dashboard_filters
 
@@ -66,7 +68,7 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             lodge_id: int,
             skip: int = 0,
             limit: int = 50
-    ) :
+    ) -> Sequence[RowMapping]:
         """
         Retrieve rooms formatted for the dashboard with filters applied.
 

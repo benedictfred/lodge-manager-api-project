@@ -10,6 +10,7 @@ from app.models.lease import Lease
 from app.models.lodge import Lodge
 from app.models.room import Room
 from app.models.tenantprofile import TenantProfile
+from app.models.user import User
 from app.schemas.lodge import LodgeCreate, LodgeUpdate
 from app.crud.base_crud import CRUDBase
 from app.core import constants as const
@@ -185,7 +186,58 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
         result = db.execute(stmt).mappings().first()
         return result
 
+    def get_room_lease_info(
+            self,
+            db: Session,
+            landlord_id: int,
+            lease_id: int
+    ):
 
+        per_lease_payment_total = func.coalesce(const.PAYMENT_SUBQ.c.total_amt_paid, 0)
+        remaining_balance_expr = (Lease.agreed_rent_amt - per_lease_payment_total)
+        tenant_full_name = func.concat(User.first_name, ' ', User.last_name)
+        stmt = select(
+            Room.description.label('description'),
+            Room.base_rent_price.label('base_rent'),
+            Room.status.label('status'),
+            Lease.start_date.label('start_date'),
+            Lease.end_date.label('end_date'),
+            Lease.agreed_rent_amt.label('agreed_rent'),
+            per_lease_payment_total.label('total_paid'),
+            remaining_balance_expr.label('remaining_balance'),
+            tenant_full_name.label('name'),
+            User.phone_no.label('phone')
+
+        ).select_from(
+            Lease
+        ).join(
+            self.model, Room.lodge_id == self.model.id
+        ).join(
+            Room, Lease.room_id == Room.id
+        ).join(
+            TenantProfile, Lease.tenant_id == TenantProfile.id
+        ).join(
+            User, TenantProfile.user_id == User.id
+        ).outerjoin(
+            const.PAYMENT_SUBQ, const.PAYMENT_SUBQ.c.lease_id == Lease.id
+        ).where(
+            self.model.landlord_id == landlord_id,
+            Lease.id == lease_id,
+            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
+        ).group_by(
+            Lease.id,
+            Room.description,
+            Room.status,
+            Room.base_rent_price,
+            Lease.start_date,
+            Lease.end_date,
+            Lease.agreed_rent_amt,
+            User.first_name,
+            User.last_name,
+            const.PAYMENT_SUBQ.c.total_amt_paid
+        )
+
+        return db.execute(stmt).mappings().first()
 
 
 crud_lodge = CRUDLodge(Lodge)

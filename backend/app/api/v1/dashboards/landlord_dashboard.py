@@ -13,7 +13,7 @@ from app.api.deps import get_landlord_user, get_db
 from app.core.enums import RoomStatus, BadgeTexts
 from app.models.user import User
 from app.schemas import dashboard as schema_dashboard
-from app.schemas.dashboard import DashboardFilters
+from app.schemas.dashboard import DashboardFilters, RoomLeaseInfo
 from app.services import dashboard_service
 
 
@@ -59,4 +59,17 @@ def get_landlord_dashboard(
     return dashboard_service.get_landlord_dashboard(
         db, lodge_id=lodge_id,skip=skip,limit=limit,
         filter_by=all_filters, landlord_id=landlord_user.id
+    )
+
+
+@router.get('/lease-info/{lease_id}', response_model=RoomLeaseInfo)
+def get_room_lease_info(
+        lease_id: int,
+        db: Session = Depends(get_db),
+        landlord_user: User = Depends(get_landlord_user)
+):
+    return dashboard_service.get_dashboard_lease_info(
+        db,
+        lease_id=lease_id,
+        landlord_id=landlord_user.id
     )

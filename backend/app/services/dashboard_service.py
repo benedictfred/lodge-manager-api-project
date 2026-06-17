@@ -3,14 +3,20 @@ Module providing dashboard-related business logic.
 
 This module contains services for generating dashboard summaries.
 """
+from datetime import date
 from typing import Optional
 
+from app.core.exceptions import LeaseNotFoundError
+from app.crud.lease import crud_lease
 from app.crud.lodge import crud_lodge
+from app.models.lease import Lease
 from app.models.room import RoomFilter
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.core.enums import BadgeTexts
 from app.crud.payment import crud_payment
-from app.schemas.dashboard import LandlordDashboardStats, DashboardFilters
+from app.models.tenantprofile import TenantProfile
+from app.schemas.dashboard import LandlordDashboardStats, DashboardFilters, RoomSummary, LeaseSummary, FinancialSummary, \
+    TenantSummary, RoomLeaseInfo
 from app.schemas.entity_count import EntityCountResponse, OccupiedCounts
 from app.schemas.financial import FinancialResponse
 from app.schemas.lease import OccupiedRoomLeasesResponse
@@ -175,3 +181,46 @@ def get_landlord_dashboard(
         vacant_rooms=rooms.vacant,
     )
     return dashboard_stats
+
+def _organise_room_lease_summary(
+        db: Session,
+        landlord_id: int,
+        lease_id: int
+):
+    raw_summary_row = crud_lodge.get_room_lease_info(
+        db,
+        landlord_id=landlord_id,
+        lease_id=lease_id
+    )
+    if not raw_summary_row:
+        raise LeaseNotFoundError()
+
+    room_summary = RoomSummary(**raw_summary_row)
+    lease_summary = LeaseSummary(**raw_summary_row)
+    financial_summary = FinancialSummary(**raw_summary_row)
+    tenant_summary = TenantSummary(**raw_summary_row)
+    
+    return RoomLeaseInfo(
+        room=room_summary,
+        lease=lease_summary,
+        tenant=tenant_summary,
+        finance=financial_summary
+    )
+
+def get_dashboard_lease_info(
+        db: Session,
+        lease_id: int,
+        landlord_id: int
+):
+    #lease exists and owned by landlord
+    #crud to build a query that joins the room, lease, tenant, user, payment_subq together and bundle the necessary
+    #info into in the select
+    #then calculates balance in python b4  putting in the RoomLeaseInfo schema
+
+
+    return _organise_room_lease_summary(
+        db,
+        landlord_id=landlord_id,
+        lease_id=lease_id
+    )
+
