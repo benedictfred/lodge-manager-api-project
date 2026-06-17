@@ -3,7 +3,7 @@ import json
 import pytest
 from fastapi import status
 
-from app.core.enums import RoomStatus
+from app.core.enums import RoomStatus, LeaseStatus
 from test.conftest import base_url
 
 dashboard_url = f'{base_url}/dashboard-landlord'
@@ -248,3 +248,36 @@ def test_landlord_dashboard_empty_lodge_returns_200(authenticated_landlord_clien
     assert data['entity_counts']['total_tenants'] == 0
 
 
+def test_get_dashboard_lease_info_success_returns_200(authenticated_landlord_client, tenant_safe_payments_in_db):
+    """
+    Tests that fetching lease info for a valid, owned, and active lease returns the correct
+    nested payload (room, lease, finance, tenant).
+    """
+    db_safe_payments, lease = tenant_safe_payments_in_db
+    
+    response = authenticated_landlord_client.get(url=f'{dashboard_url}/lease-info/{lease.id}')
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    
+    assert 'room' in data
+    assert 'lease' in data
+    assert 'finance' in data
+    assert 'tenant' in data
+    
+    assert data['room']['base_rent'] == 210000
+    assert data['finance']['agreed_rent'] == 210000
+    assert data['tenant']['name'] != 'N/A'
+
+
+def test_get_dashboard_lease_info_terminated_returns_404(authenticated_landlord_client, add_terminated_lease_to_db, test_db):
+    """
+    Tests the 'Ghost Lease' scenario: Fetching a lease that the landlord owns, but whose 
+    status is TERMINATED. Because the dashboard strictly ignores historical leases, 
+    this must return a 404 Not Found instead of N/A data.
+    """
+    lease = add_terminated_lease_to_db
+
+    
+    response = authenticated_landlord_client.get(url=f'{dashboard_url}/lease-info/{lease.id}')
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()['detail'] == 'Lease could not be found'
