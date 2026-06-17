@@ -17,6 +17,10 @@ origins = [
     "http://localhost:5173", # Default for Vite React apps
     "http://localhost:3000", # Default for Create React App
     "http://localhost:8080", # Local python server
+    "http://127.0.0.1:5500", # VSCode Live Server
+    "http://localhost:5500", # VSCode Live Server
+    "http://localhost:63342", # PyCharm Built-in Server
+    "http://127.0.0.1:63342", # PyCharm Built-in Server
     "null",                  # Opening file:/// directly in browser
 ]
 

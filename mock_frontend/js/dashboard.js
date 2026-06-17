@@ -277,9 +277,19 @@ async function openRoomSidePanel(room, colors) {
         document.getElementById('sp-room-status').textContent = leaseInfo.room.status || 'N/A';
         document.getElementById('sp-room-rent').textContent = currencyFormatter.format(leaseInfo.room.base_rent || 0);
 
+        const formatHumanDate = (dateStr) => {
+            if (!dateStr) return 'N/A';
+            const d = new Date(dateStr);
+            const day = d.getDate();
+            const suffix = ["th", "st", "nd", "rd"][((day % 100) >= 11 && (day % 100) <= 13) ? 0 : (day % 10 < 4 ? day % 10 : 0)];
+            const month = d.toLocaleString('en-US', { month: 'long' });
+            const year = d.getFullYear();
+            return `${day}${suffix} ${month} ${year}`;
+        };
+
         // 2. Bind Lease
-        document.getElementById('sp-lease-start').textContent = new Date(leaseInfo.lease.start_date).toLocaleDateString();
-        document.getElementById('sp-lease-end').textContent = new Date(leaseInfo.lease.end_date).toLocaleDateString();
+        document.getElementById('sp-lease-start').textContent = formatHumanDate(leaseInfo.lease.start_date);
+        document.getElementById('sp-lease-end').textContent = formatHumanDate(leaseInfo.lease.end_date);
 
         // 3. Bind Financials
         document.getElementById('sp-fin-agreed').textContent = currencyFormatter.format(leaseInfo.finance.agreed_rent || 0);

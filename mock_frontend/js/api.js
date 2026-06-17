@@ -27,8 +27,40 @@ async function apiFetch(endpoint, options = {}) {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
         
         if (response.status === 401) {
-            // Unauthorized - token expired or missing
+            const refreshToken = localStorage.getItem('refresh_token');
+            
+            // If we have a refresh token and we aren't currently trying to refresh
+            if (refreshToken && !endpoint.includes('/refresh')) {
+                try {
+                    // Make a silent request to the refresh endpoint
+                    const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: refreshToken })
+                    });
+
+                    if (refreshResponse.ok) {
+                        const newTokens = await refreshResponse.json();
+                        localStorage.setItem('access_token', newTokens.access_token);
+                        
+                        // Retry the original request with the new token
+                        config.headers['Authorization'] = `Bearer ${newTokens.access_token}`;
+                        const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, config);
+                        
+                        if (retryResponse.status === 204) return null;
+                        if (!retryResponse.ok) throw new Error('Retry failed');
+                        
+                        return await retryResponse.json();
+                    }
+                } catch (refreshErr) {
+                    console.error("Refresh failed", refreshErr);
+                    // Fall through to the logout logic below
+                }
+            }
+
+            // Unauthorized - token expired or missing, and refresh failed or wasn't available
             localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
             if (!window.location.pathname.endsWith('auth.html') && !window.location.pathname.endsWith('tenant-register.html')) {
                 window.location.href = 'auth.html';
             }

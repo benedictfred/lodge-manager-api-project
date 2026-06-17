@@ -70,3 +70,8 @@ def login_user(
         schema_user.Token: The authentication token.
     """
     return user_service.login_authenticated_user(db, email=form_data.username.lower(), password=form_data.password)
+
+
+@router.post('/refresh', response_model=schema_user.Token)
+def refresh_token(request: schema_user.RefreshTokenRequest, db: Session = Depends(get_db)):
+    return user_service.refresh_access_token(db, request.refresh_token)

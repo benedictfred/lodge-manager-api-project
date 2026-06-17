@@ -61,6 +61,7 @@ async function fetchLeases() {
             const rentStr = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(lease.agreed_rent_amt);
             
             let statusBadge = `<span class="room-badge badge-safe">Active</span>`;
+            if (lease.status === 'Overdue') statusBadge = `<span class="room-badge badge-overdue">Overdue</span>`;
             if (lease.status === 'Terminated') statusBadge = `<span class="room-badge badge-maintenance">Terminated</span>`;
             if (lease.status === 'Pending_Termination') statusBadge = `<span class="room-badge badge-pending">Pending Term.</span>`;
 

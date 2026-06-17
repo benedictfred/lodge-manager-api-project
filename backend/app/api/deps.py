@@ -8,7 +8,9 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import NotLandlordError, NotTenantError, UserNotFoundError
+from app.core.exceptions import NotLandlordError, NotTenantError, UserNotFoundError, UnauthorizedAccessError, \
+    InvalidLeaseActionError, InvalidCredentialsError
+from app.core.security import create_access_token
 from app.db.session import SessionLocal
 from typing import Generator, cast
 from fastapi.security import OAuth2PasswordBearer
@@ -55,10 +57,7 @@ def get_current_user(
         HTTPException: If the credentials could not be validated.
         UserNotFoundError: If the user is not found or inactive.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail='Could not validate credentials'
-    )
+    
     try:
 
         payload = jwt.decode(
@@ -69,10 +68,13 @@ def get_current_user(
 
         user_id = payload.get('sub')
         if not user_id:
-            raise credentials_exception
+            raise InvalidCredentialsError
+
+        if  payload.get('type') != 'access':
+            raise InvalidCredentialsError
 
     except (jwt.PyJWTError, ValueError, ValidationError):
-        raise credentials_exception
+        raise InvalidCredentialsError
 
     current_user: User = crud_user.get(db=db, item_id=user_id)
 
@@ -124,3 +126,5 @@ def get_tenant_user(
     if not is_tenant(current_user.role):
         raise NotTenantError()
     return current_user
+
+

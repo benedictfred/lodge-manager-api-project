@@ -1,5 +1,7 @@
 from typing import Optional, Any
 
+from starlette import status
+
 from app.core.enums import LeaseStatus
 
 class BaseLodgeOpsError(Exception):
@@ -103,3 +105,7 @@ class NotTenantError(BaseNotAllowedError):
     def __init__(self):
         super().__init__(entity_name='tenants')
 
+class InvalidCredentialsError(BaseLodgeOpsError):
+    def __init__(self):
+        self.detail = 'could not validate credentials'
+        super().__init__(detail=self.detail, status_code=status.HTTP_401_UNAUTHORIZED)

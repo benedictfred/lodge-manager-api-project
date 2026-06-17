@@ -29,6 +29,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         });
         
         localStorage.setItem('access_token', data.access_token);
+        if (data.refresh_token) {
+            localStorage.setItem('refresh_token', data.refresh_token);
+        }
         
         // After login, fetch profile to see if it's a Landlord or Tenant
         // For our mock, we assume Landlord logging in goes to lodges

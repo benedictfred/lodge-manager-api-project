@@ -3,12 +3,16 @@ Module providing user-related business logic.
 
 This module contains services for managing users, including authentication.
 """
+import jwt
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.crud.user import crud_user
 from app.core.enums import UserRole
-from app.core.exceptions import UserAlreadyExistError, UnauthorizedAccessError
-from app.core.security import verify_password_hash, get_password_hash, create_access_token
+from app.core.exceptions import UserAlreadyExistError, UnauthorizedAccessError, UserNotFoundError, \
+    InvalidCredentialsError
+from app.core.security import verify_password_hash, get_password_hash, create_access_token, create_refresh_token
 from app.models.user import User
 from app.schemas.user import UserCreate, UserInternal
 
@@ -90,7 +94,42 @@ def login_authenticated_user(
         subject=str(authenticated_user.id)
     )
 
+    refresh_token = create_refresh_token(
+        subject=str(authenticated_user.id)
+    )
+
+
     return {
         'access_token': access_token,
+        'refresh_token': refresh_token,
+        'token_type': 'bearer'
+    }
+
+
+def refresh_access_token(db: Session, refresh_token: str):
+    try:
+        payload = jwt.decode(
+            refresh_token,
+            key=settings.REFRESH_SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+    except (jwt.PyJWTError, ValueError, ValidationError):
+        raise InvalidCredentialsError()
+
+    if payload.get('type') != 'refresh':
+        raise InvalidCredentialsError()
+
+    user_id = payload.get('sub')
+
+    current_user: User = crud_user.get(db=db, item_id=user_id)
+
+    if not current_user or not current_user.is_active:
+        raise UserNotFoundError()
+
+    access_token = create_access_token(str(current_user.id))
+
+    return {
+        'access_token': access_token,
+        'refresh_token': refresh_token,
         'token_type': 'bearer'
     }
