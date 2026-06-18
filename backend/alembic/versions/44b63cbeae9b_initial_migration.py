@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 47e9d1afef41
+Revision ID: 44b63cbeae9b
 Revises: 
-Create Date: 2026-05-23 21:33:22.089782
+Create Date: 2026-06-18 15:18:28.829355
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '47e9d1afef41'
+revision: str = '44b63cbeae9b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -87,7 +87,7 @@ def upgrade() -> None:
     sa.Column('start_date', sa.Date(), nullable=False),
     sa.Column('end_date', sa.Date(), nullable=False),
     sa.Column('agreed_rent_amt', sa.Integer(), nullable=False),
-    sa.Column('status', sa.Enum('ACTIVE', 'EXPIRED', 'TERMINATED', 'PENDING_TERMINATION', name='leasestatus'), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'OVERDUE', 'TERMINATED', 'PENDING_TERMINATION', name='leasestatus'), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['room_id'], ['rooms.id'], ),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenant_profiles.id'], ),
@@ -104,6 +104,7 @@ def upgrade() -> None:
     with op.batch_alter_table('payments', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_payments_lease_id'), ['lease_id'], unique=False)
 
+    op.execute('UPDATE leases SET status = NULL')
     # ### end Alembic commands ###
 
 

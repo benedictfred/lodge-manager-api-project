@@ -194,7 +194,6 @@ def room_schema_factory():
             room_no: str = 'Test Rm-1',
             description: str = 'spacious self con',
             base_rent_price: int = 210000,
-            status: RoomStatus = RoomStatus.VACANT,
             lodge_id: int = 1
 
     ):
@@ -202,7 +201,6 @@ def room_schema_factory():
             room_no=room_no,
             description=description,
             base_rent_price=base_rent_price,
-            status=status,
             lodge_id=lodge_id
         )
 
@@ -325,7 +323,6 @@ def vacant_rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, add_lod
             room_no=f'Test rm{i + 1}',
             description=f'description Test {i + 1}',
             base_rent_price= random.randint(250000, 350000),
-            status= RoomStatus.VACANT,
             lodge_id=add_lodge_to_db.id
         )
         new_room = room_service.create_room_for_lodge(
@@ -418,7 +415,6 @@ def lease_schema_factory():
         total_amt_paid: int = 105000,
         start_date: date = date.today(),
         end_date: date = date.today() + timedelta(days=365),
-        status: LeaseStatus = LeaseStatus.ACTIVE
     ):
         return schema_lease.LeaseCreate(
             tenant_id=tenant_id,
@@ -427,7 +423,6 @@ def lease_schema_factory():
             total_amt_paid=total_amt_paid,
             start_date=start_date,
             end_date=end_date,
-            status=status
         )
     return _create
 
@@ -446,7 +441,7 @@ def add_active_lease_to_db(test_db, lease_schema_factory,add_room_to_db, add_ten
     tenant_id = add_tenant_to_db.id
     room_id = add_room_to_db.id
 
-    lease_schema = lease_schema_factory(status=LeaseStatus.ACTIVE, room_id=room_id, tenant_id=tenant_id)
+    lease_schema = lease_schema_factory(room_id=room_id, tenant_id=tenant_id)
 
     return lease_services.create_new_lease(
         db=test_db,
@@ -455,7 +450,7 @@ def add_active_lease_to_db(test_db, lease_schema_factory,add_room_to_db, add_ten
     )
 
 @pytest.fixture
-def add_overdue_lease_to_db(test_db, lease_schema_factory, add_landlord_to_db, add_lodge_to_db,
+def add_overdue_lease_to_db(test_db,lease_schema_factory, add_landlord_to_db, add_lodge_to_db,
                             add_tenant_to_db, add_room_to_db):
     """
 
@@ -464,40 +459,37 @@ def add_overdue_lease_to_db(test_db, lease_schema_factory, add_landlord_to_db, a
     tenant_id = add_tenant_to_db.id
     room_id = add_room_to_db.id
     return lease_services.create_new_lease(
-        db=test_db,
-        lease_data=lease_schema_factory(status=LeaseStatus.OVERDUE, room_id=room_id, tenant_id=tenant_id),
+        test_db,
+        lease_data=lease_schema_factory(tenant_id=tenant_id, room_id=room_id, end_date=date.today() - timedelta(days=10)),
         landlord_user=add_landlord_to_db
     )
 
 @pytest.fixture
-def add_terminated_lease_to_db(test_db, lease_schema_factory, add_landlord_to_db, add_tenant_to_db, add_room_to_db):
+def add_terminated_lease_to_db(test_db, add_active_lease_to_db, add_landlord_to_db):
     """
     Fixture to create and add a terminated lease to the database.
     """
-    tenant_id = add_tenant_to_db.id
-    room_id = add_room_to_db.id
 
-    return lease_services.create_new_lease(
-        db=test_db,
-        lease_data=lease_schema_factory(status=LeaseStatus.TERMINATED, room_id=room_id, tenant_id=tenant_id),
-        landlord_user=add_landlord_to_db
+    lease_id = add_active_lease_to_db.id
+
+    return lease_services.terminate_lease(
+        test_db,
+        lease_id=lease_id,
+        landlord_id=add_landlord_to_db.id
     )
-
 @pytest.fixture
-def add_pending_termination_lease_to_db(test_db, lease_schema_factory, add_landlord_to_db, add_tenant_to_db,
-                                        add_room_to_db):
+def add_pending_termination_lease_to_db(test_db, add_active_lease_to_db, add_landlord_to_db, add_tenant_to_db):
     """
     Fixture to create and add a lease pending termination to the database.
     """
+    lease_id = add_active_lease_to_db.id
     tenant_id = add_tenant_to_db.id
-    room_id = add_room_to_db.id
 
-    return lease_services.create_new_lease(
-        db=test_db,
-        lease_data=lease_schema_factory(status=LeaseStatus.PENDING_TERMINATION, tenant_id=tenant_id, room_id=room_id),
-        landlord_user=add_landlord_to_db
+    return lease_services.appeal_for_lease_termination(
+        test_db,
+        lease_id=lease_id,
+        tenant_id=tenant_id
     )
-
 @pytest.fixture
 def add_active_lease_to_diff_landlord_lodge(test_db, lease_schema_factory, add_different_landlord,
                                             add_diff_landlord_tenant, add_diff_landlord_room):
@@ -507,7 +499,6 @@ def add_active_lease_to_diff_landlord_lodge(test_db, lease_schema_factory, add_d
     lease_data = lease_schema_factory(
         tenant_id=add_diff_landlord_tenant.id,
         room_id=add_diff_landlord_room.id,
-        status=LeaseStatus.ACTIVE
     )
     return lease_services.create_new_lease(
         db=test_db,
@@ -537,7 +528,6 @@ def leases_in_db(test_db, lease_schema_factory, lease_statuses, add_landlord_to_
             agreed_rent_amt=room.base_rent_price,
             start_date=date.today() - timedelta(days=random.randint(1, 365)), # Random start date
             end_date=date.today() + timedelta(days=random.randint(1, 365)), # Random end date
-            status=status
         )
         new_lease = lease_services.create_new_lease(
             db=test_db,
@@ -565,7 +555,6 @@ def tenant_lease_history_in_db(test_db, lease_schema_factory, add_landlord_to_db
             room_no=f'History Rm-{i+1}',
             description=f'Room for history test {i+1}',
             base_rent_price= 250000,
-            status= RoomStatus.VACANT,
             lodge_id=add_lodge_to_db.id
         )
         new_room = room_service.create_room_for_lodge(test_db, landlord_id=add_landlord_to_db.id, room_in=rm_schema)
@@ -579,7 +568,6 @@ def tenant_lease_history_in_db(test_db, lease_schema_factory, add_landlord_to_db
             agreed_rent_amt=new_room.base_rent_price,
             start_date=date.today() - timedelta(days=365 * (i+1)) if status == LeaseStatus.OVERDUE else date.today() - timedelta(days=20 * (i + 1)),# Start date in the past
             end_date=date.today() - timedelta(days=365 * i) if status == LeaseStatus.OVERDUE else (date.today() - timedelta(days=20 * (i + 1))) + timedelta(days=365),
-            status=status
         )
         
         new_lease = lease_services.create_new_lease(

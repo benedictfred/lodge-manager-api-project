@@ -5,13 +5,15 @@ This module contains services for managing rooms.
 """
 from typing import Optional
 
+from app.core.enums import RoomStatus
+from app.models.room import Room
 from app.schemas import room as schema_room
 from app.crud.room import crud_room
 from sqlalchemy.orm import Session
 
 from app.schemas.room import RoomResponse
 from app.services import lodge_service
-from app.core.exceptions import RoomAlreadyExistError, RoomNotFoundError
+from app.core.exceptions import RoomAlreadyExistError, RoomNotFoundError, RoomIsOccupiedError
 
 
 def create_room_for_lodge(db: Session, room_in: schema_room.RoomCreate, landlord_id: int) -> RoomResponse:
@@ -102,6 +104,9 @@ def update_room_details(db: Session, room_id: int, landlord_id: int, update_data
         Room: The updated room.
     """
     room = verify_room_existence(db, landlord_id=landlord_id, room_id=room_id)
+
+    if room.status == RoomStatus.OCCUPIED:
+        raise RoomIsOccupiedError()
 
     return crud_room.update(db, db_obj=room, update_data=update_data)
 

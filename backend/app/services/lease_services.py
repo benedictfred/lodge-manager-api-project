@@ -47,7 +47,7 @@ def create_new_lease(
     )
 
     if active_lease:
-        raise InvalidLeaseActionError(status=active_lease.status)
+        raise InvalidLeaseActionError(status=active_lease.computed_status)
 
     return crud_lease.create_lease(db, lease_data=lease_data, room=room)
 
@@ -243,7 +243,7 @@ def update_lease_details(
     if lease.room.lodge.landlord_id != landlord_id:
         return LeaseNotFoundError()
 
-    return crud_lease.update_lease(db, db_lease=lease, lease_data=update_data)
+    return crud_lease.update(db, db_obj=lease, update_data=update_data)
 
 
 def appeal_for_lease_termination(

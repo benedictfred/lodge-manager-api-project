@@ -10,7 +10,7 @@ from app.db.session import Base
 from sqlalchemy import ForeignKey, Enum, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, mapped_column, Mapped
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.models.tenantprofile import TenantProfile
@@ -43,9 +43,17 @@ class Lease(Base):
     start_date: Mapped[date] = mapped_column( nullable=False)
     end_date: Mapped[date] = mapped_column(nullable=False)
     agreed_rent_amt: Mapped[int] = mapped_column( nullable=False)
-    status: Mapped[LeaseStatus] = mapped_column(Enum(LeaseStatus), default=LeaseStatus.ACTIVE)
+    status: Mapped[Optional[LeaseStatus]] = mapped_column(Enum(LeaseStatus), default=None, nullable=True)
     tenant: Mapped["TenantProfile"] = relationship(back_populates='leases')
     room: Mapped["Room"] = relationship(back_populates='leases')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     payments: Mapped[list["Payment"]] = relationship(back_populates='lease')
+
+    @property
+    def computed_status(self) -> LeaseStatus:
+        if self.status:
+            return self.status
+        if self.end_date >= date.today():
+            return LeaseStatus.ACTIVE
+        return LeaseStatus.OVERDUE
 

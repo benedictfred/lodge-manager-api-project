@@ -12,7 +12,7 @@ from app.models.tenantprofile import TenantProfile
 from app.schemas.lease import LeaseCreate, LeaseUpdate
 from app.models.lease import Lease
 from app.crud.base_crud import CRUDBase
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy import select
 
 class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
@@ -107,7 +107,7 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
             db_payment = Payment(lease_id=db_lease.id, amount_paid=lease_data.total_amt_paid)
             db.add(db_payment)
 
-            room.status = RoomStatus.OCCUPIED if db_lease.status in _occupied_allowed_statuses else RoomStatus.VACANT
+            room.status = RoomStatus.OCCUPIED if db_lease.computed_status in _occupied_allowed_statuses else RoomStatus.VACANT
             db.commit()
             db.refresh(db_lease)
 
@@ -133,7 +133,8 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         return db.query(self.model).filter(
             self.model.room_id == room_id,
             self.model.tenant_id == tenant_id,
-            Lease.status == LeaseStatus.ACTIVE
+            self.model.status.is_(None),
+            self.model.end_date >= date.today()
         ).first()
 
     def lease_terminate(self, db: Session, db_lease: Lease) -> Lease:
@@ -156,30 +157,6 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         return db_lease
 
 
-    def update_lease(self, db: Session, lease_data: LeaseUpdate, db_lease: Lease) -> Lease:
-        """
-        Update an existing lease.
-
-        Args:
-            db (Session): The database session.
-            lease_data (LeaseUpdate): The updated lease data.
-            db_lease (Lease): The lease to update.
-
-        Returns:
-            Lease: The updated lease.
-        """
-        update_data = lease_data.model_dump(exclude_unset=True)
-        #if the update_data is trying to update the lease status, make the lease's room occupied
-        if lease_data.status:
-            db_lease.room.status  =  RoomStatus.OCCUPIED
-            
-        for k, v in update_data.items():
-            setattr(db_lease, k, v)
-
-        db.add(db_lease)
-        db.commit()
-        db.refresh(db_lease)
-        return db_lease
 
     def  request_terminate_lease(self, db: Session, db_lease: Lease) -> Lease:
         """

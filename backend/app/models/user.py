@@ -35,7 +35,7 @@ class User(Base):
         lodges (list[Lodge]): Relationship to the lodges owned by the user (if landlord).
         tenant_profile (TenantProfile): Relationship to the user's tenant profile (if tenant).
     """
-    __tablename__ = 'users'  # Fixed missing underscores
+    __tablename__ = 'users'
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
@@ -63,7 +63,3 @@ class User(Base):
         cascade='all, delete-orphan',
         single_parent=True
     )
-
-    @property
-    def full_name(self):
-        return f'{self.first_name} {self.last_name}'

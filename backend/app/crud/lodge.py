@@ -179,7 +179,10 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             const.PAYMENT_SUBQ, const.PAYMENT_SUBQ.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id,
-            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION]),
+            or_(
+                Lease.status.is_(None),
+                Lease.status == LeaseStatus.PENDING_TERMINATION
+            ),
             Room.status == RoomStatus.OCCUPIED
         )
 
@@ -223,7 +226,10 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
         ).where(
             self.model.landlord_id == landlord_id,
             Lease.id == lease_id,
-            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
+            or_(
+                Lease.status.is_(None),
+                Lease.status == LeaseStatus.PENDING_TERMINATION
+            )
         ).group_by(
             Lease.id,
             Room.description,

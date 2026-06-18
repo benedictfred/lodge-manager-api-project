@@ -3,7 +3,6 @@ from fastapi import status
 from datetime import timedelta
 
 from app.core.enums import LeaseStatus
-from app.models.lease import Lease
 from test.conftest import base_url, add_lodge_to_db
 
 lease_url = f'{base_url}/leases'
@@ -21,7 +20,7 @@ def test_landlord_create_lease_returns_200(authenticated_landlord_client, mock_l
     assert data['tenant_id'] == mock_lease_schema.tenant_id
     assert data['room_id'] == mock_lease_schema.room_id
     assert data['agreed_rent_amt'] == mock_lease_schema.agreed_rent_amt
-    assert data['status'] == mock_lease_schema.status.value
+    assert data['status'] == 'Active'
     assert data['start_date'] == mock_lease_schema.start_date.isoformat()
     assert data['end_date'] == mock_lease_schema.end_date.isoformat()
     assert 'id' in data

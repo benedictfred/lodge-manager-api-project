@@ -92,3 +92,29 @@ function openTenantModal(tenantId) {
 function closeTenantModal() {
     document.getElementById('tenant-modal').classList.remove('active');
 }
+
+async function copyInviteLink() {
+    const lodgeId = localStorage.getItem('active_lodge_id');
+    if (!lodgeId) {
+        alert('No active lodge found.');
+        return;
+    }
+    
+    // Construct the link dynamically based on the current window location
+    const origin = window.location.origin;
+    let basePath = window.location.pathname;
+    basePath = basePath.substring(0, basePath.lastIndexOf('/'));
+    const link = `${origin}${basePath}/tenant-register.html?lodge_id=${lodgeId}`;
+    
+    try {
+        await navigator.clipboard.writeText(link);
+        if (typeof showToast === 'function') {
+            showToast('Invite link copied to clipboard!');
+        } else {
+            alert('Invite link copied to clipboard: \n' + link);
+        }
+    } catch (err) {
+        // Fallback for older browsers or if clipboard API fails
+        prompt("Copy this invite link and send to your tenant:", link);
+    }
+}

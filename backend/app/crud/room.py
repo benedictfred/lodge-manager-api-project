@@ -15,7 +15,7 @@ from app.schemas.dashboard import DashboardFilters
 from app.schemas.room import RoomCreate, RoomUpdate
 from sqlalchemy.orm import Session
 from app.crud.base_crud import CRUDBase
-from sqlalchemy import select, case, and_, func, RowMapping
+from sqlalchemy import select, case, and_, func, RowMapping, or_
 from app.core import constants as const
 from utilities.dashboard_utilities import apply_dashboard_filters
 
@@ -126,15 +126,25 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
                 else_='Invalid'
             ).label('sub_display_text'),
             
-            (and_(*const.filter_menu.get(BadgeTexts.OWING))).label('is_owing')
+
+            case(
+                (and_(*const.filter_menu.get(BadgeTexts.OWING)), True),
+                else_=False
+            ).label('is_owing')
 
         ).select_from(
             Room
         ).outerjoin(
-            Lease, and_(
+            Lease,
+            and_(
                 Room.id == Lease.room_id,
-                Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
+                or_(
+                    Lease.status.is_(None),
+                    Lease.status == LeaseStatus.PENDING_TERMINATION
+                )
+
             )
+
         ).outerjoin(
             TenantProfile, Lease.tenant_id == TenantProfile.id
         ).outerjoin(

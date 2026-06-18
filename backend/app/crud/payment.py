@@ -120,7 +120,10 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
             Room, Room.id == Lease.room_id
         ).where(
             Room.lodge_id == lodge_id,
-            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
+            or_(
+                Lease.status.is_(None),
+                Lease.status == LeaseStatus.PENDING_TERMINATION
+            )
         ))
 
         stmt = apply_dashboard_filters(filter_by=filter_by, stmt=stmt, filters=constants.filter_menu)
@@ -153,7 +156,10 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
             Room, Lease.room_id == Room.id
         ).where(
             Room.lodge_id == lodge_id,
-            Lease.status.in_([LeaseStatus.ACTIVE, LeaseStatus.OVERDUE, LeaseStatus.PENDING_TERMINATION])
+            or_(
+                Lease.status.is_(None),
+                Lease.status == LeaseStatus.PENDING_TERMINATION
+            )
         )
 
         stmt = apply_dashboard_filters(filter_by=filter_by, stmt=stmt, filters=constants.filter_menu)

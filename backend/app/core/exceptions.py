@@ -109,3 +109,9 @@ class InvalidCredentialsError(BaseLodgeOpsError):
     def __init__(self):
         self.detail = 'could not validate credentials'
         super().__init__(detail=self.detail, status_code=status.HTTP_401_UNAUTHORIZED)
+
+class RoomIsOccupiedError(BaseLodgeOpsError):
+    def __init__(self):
+        self.detail = "Cannot update an occupied room. Terminate the lease first."
+        super().__init__(detail=self.detail, status_code=status.HTTP_400_BAD_REQUEST)
+

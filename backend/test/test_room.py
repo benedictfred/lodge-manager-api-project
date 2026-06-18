@@ -17,6 +17,7 @@ def test_landlord_create_room_returns_200(authenticated_landlord_client, mock_ro
     assert response.status_code == status.HTTP_200_OK
     assert data['room_no'] == mock_room_schema.room_no
     assert data['description'] == mock_room_schema.description
+    assert data['status'] == RoomStatus.VACANT
     assert data['base_rent_price'] == mock_room_schema.base_rent_price
     assert data['lodge_id'] == mock_room_schema.lodge_id
     assert 'id' in data
@@ -206,3 +207,15 @@ def test_tenant_cannot_update_room_returns_403(authenticated_tenant_client, add_
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert data['detail'] == 'Only landlords are allowed.'
+
+def test_landlord_cannot_create_occupied_room(authenticated_landlord_client, add_active_lease_to_db):
+    room_id = add_active_lease_to_db.room_id
+
+    response = authenticated_landlord_client.patch(
+        url=f'{room_url}/{room_id}',
+        json={'status': RoomStatus.OCCUPIED}
+    )
+    data = response.json()
+    print(data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert data['detail'] == 'Cannot update an occupied room. Terminate the lease first.'

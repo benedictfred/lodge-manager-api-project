@@ -1,7 +1,6 @@
 from sqlalchemy import func, cast, Integer
 
 from app.core.enums import RoomStatus, BadgeTexts, LeaseStatus
-from app.crud.payment import crud_payment
 from app.models.lease import Lease
 from app.models.room import Room
 from app.crud.payment import PAYMENT_SUBQ
@@ -18,7 +17,7 @@ occupied_expr = Room.status == RoomStatus.OCCUPIED
 vacant_expr = Room.status == RoomStatus.VACANT
 maintenance_expr = Room.status == RoomStatus.MAINTENANCE
 
-is_not_pending = Lease.status != LeaseStatus.PENDING_TERMINATION
+is_not_pending = Lease.status.is_(None)
 
 filter_menu = {
     RoomStatus.OCCUPIED: occupied_expr,

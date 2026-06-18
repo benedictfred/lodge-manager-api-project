@@ -102,9 +102,10 @@
             const urlParams = new URLSearchParams(window.location.search);
             let lodgeId = parseInt(urlParams.get('lodge_id'), 10);
             
-            // Fallback for mock environment testing
+            // Fallback for mock environment testing: manual input
             if (!lodgeId || isNaN(lodgeId)) {
-                lodgeId = parseInt(localStorage.getItem('active_lodge_id'), 10);
+                const manualLodgeId = prompt("Mock Environment: No Lodge ID found in URL. Please enter the Lodge ID manually (e.g., 1):");
+                lodgeId = parseInt(manualLodgeId, 10);
             }
             
             if (!lodgeId || isNaN(lodgeId)) {
