@@ -703,7 +703,7 @@ def add_dashboard_stats(test_db, add_lodge_to_db, add_landlord_to_db, room_schem
 
         room_no = f'test rm {room_counter}'
 
-        room_data = room_schema_factory(room_no=room_no, base_rent_price=5000, lodge_id=lodge_id, status=RoomStatus.VACANT)
+        room_data = room_schema_factory(room_no=room_no, base_rent_price=5000, lodge_id=lodge_id)
         room = room_service.create_room_for_lodge(test_db, room_in=room_data, landlord_id=landlord_id)
         
         if scenario == "MAINTENANCE":
@@ -737,9 +737,14 @@ def add_dashboard_stats(test_db, add_lodge_to_db, add_landlord_to_db, room_schem
             status = LeaseStatus.PENDING_TERMINATION
             total_paid = 2000
             
-        lease_data = lease_schema_factory(tenant_id=tenant.id, room_id=room.id, agreed_rent_amt=5000, total_amt_paid=total_paid, start_date=start_date, end_date=end_date, status=status)
-        lease_services.create_new_lease(test_db, lease_data=lease_data, landlord_user=add_landlord_to_db)
-        
+        lease_data = lease_schema_factory(tenant_id=tenant.id, room_id=room.id, agreed_rent_amt=5000, total_amt_paid=total_paid,
+                                          start_date=start_date, end_date=end_date)
+        db_lease = lease_services.create_new_lease(test_db, lease_data=lease_data, landlord_user=add_landlord_to_db)
+
+        if scenario in ['PENDING', 'PENDING_OWING']:
+            db_lease.status = status
+            test_db.commit()
+
         room_counter += 1
 
     scenarios = ["VACANT", "MAINTENANCE", "SAFE", "EXPIRING", "OVERDUE", "OWING"]
