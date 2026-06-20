@@ -247,8 +247,8 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
 
     def insert_lodge_tree(self, db: Session, db_lodge: Lodge):
         db.add(db_lodge)
-        db.refresh(db_lodge)
         db.commit()
+        db.refresh(db_lodge)
         return db_lodge
 
 

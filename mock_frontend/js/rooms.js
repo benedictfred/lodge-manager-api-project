@@ -14,9 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchRooms() {
     const tbody = document.getElementById('rooms-tbody');
     try {
-        const rooms = await apiFetch('/rooms/?skip=0&limit=100');
-        
         const activeLodgeId = parseInt(localStorage.getItem('active_lodge_id'), 10);
+        const rooms = await apiFetch(`/rooms/${activeLodgeId}/rooms?skip=0&limit=100`);
         const lodgeRooms = rooms.filter(r => r.lodge_id === activeLodgeId);
         
         tbody.innerHTML = '';
@@ -30,7 +29,7 @@ async function fetchRooms() {
             
             const rentStr = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(room.base_rent_price);
             
-            let statusBadge = `<span class="room-badge badge-safe">Available</span>`;
+            let statusBadge = `<span class="room-badge badge-safe">Vacant</span>`;
             if (room.status === 'Occupied') statusBadge = `<span class="room-badge badge-expiring">Occupied</span>`;
             if (room.status === 'Maintenance') statusBadge = `<span class="room-badge badge-maintenance">Maintenance</span>`;
 
