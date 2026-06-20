@@ -124,7 +124,7 @@ class RoomIsOccupiedError(BaseLodgeOpsError):
             'occupied_room_no ': occupied_room_no
         }
 
-        super().__init__(detail=self.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        super().__init__(detail=self.detail, status_code=status.HTTP_400_BAD_REQUEST, meta=self.meta)
 
 class NotUpdatableOptionError(BaseLodgeOpsError):
     def __init__(self, update_status: RoomStatus, allowed_options: list[RoomStatus]):
