@@ -407,7 +407,6 @@ def test_tenant_can_appeal_valid_status_lease_returns_400(authenticated_tenant_c
     
     response = authenticated_tenant_client.patch(f'{lease_url}/me/terminate/{lease.id}')
     data = response.json()
-    print(data)
 
     assert response.status_code == status.HTTP_200_OK
     assert  data['status'] == LeaseStatus.PENDING_TERMINATION
@@ -422,7 +421,6 @@ def test_tenant_appeal_invalid_status_lease_returns_400(authenticated_tenant_cli
 
     response = authenticated_tenant_client.patch(f'{lease_url}/me/terminate/{lease.id}')
     data = response.json()
-    print(data)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert data['detail'] == f"Lease is already {fixture_status_value}"

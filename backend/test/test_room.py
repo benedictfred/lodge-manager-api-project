@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 
 from app.core.enums import RoomStatus
-from test.conftest import base_url
+from test.conftest import base_url, add_lodge_to_db
 
 room_url = f'{base_url}/rooms'
 
@@ -118,29 +118,32 @@ def test_tenant_update_room_by_id_returns_403(authenticated_tenant_client, add_r
     assert data['detail'] == 'Only landlords are allowed.'
 
 
-def test_landlord_get_rooms_returns_200(authenticated_landlord_client, vacant_rooms_in_db):
+def test_landlord_get_rooms_returns_200(authenticated_landlord_client, vacant_rooms_in_db, add_lodge_to_db):
     """
     Tests that a landlord can get a list of rooms and returns a 200 status code.
     """
-    response = authenticated_landlord_client.get(url=room_url)
+    lodge_id = add_lodge_to_db.id
+    response = authenticated_landlord_client.get(url=f'{room_url}/{lodge_id}/rooms')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
     assert len(data) == len(vacant_rooms_in_db)
 
 
-def test_get_rooms_pagination_limit(authenticated_landlord_client, vacant_rooms_in_db):
+def test_get_rooms_pagination_limit(authenticated_landlord_client, add_lodge_to_db, vacant_rooms_in_db):
     """Verifies that the limit parameter restricts the number of returned items."""
-    response = authenticated_landlord_client.get(f'{room_url}?limit=2')
+    lodge_id = add_lodge_to_db.id
+    response = authenticated_landlord_client.get(f'{room_url}/{lodge_id}/rooms?limit=2')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
     assert len(data) == 2
 
 
-def test_get_rooms_pagination_skip(authenticated_landlord_client, vacant_rooms_in_db):
+def test_get_rooms_pagination_skip(authenticated_landlord_client,add_lodge_to_db, vacant_rooms_in_db):
     """Verifies that the skip parameter correctly offsets the returned items."""
-    response = authenticated_landlord_client.get(f'{room_url}?skip=2&limit=1')
+    lodge_id = add_lodge_to_db.id
+    response = authenticated_landlord_client.get(f'{room_url}/{lodge_id}/rooms?skip=2&limit=1')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -148,10 +151,11 @@ def test_get_rooms_pagination_skip(authenticated_landlord_client, vacant_rooms_i
     assert data[0]['room_no'] == vacant_rooms_in_db[2].room_no
 
 
-def test_get_rooms_pagination_skip_exceeds_total(authenticated_landlord_client, vacant_rooms_in_db):
+def test_get_rooms_pagination_skip_exceeds_total(authenticated_landlord_client, vacant_rooms_in_db, add_lodge_to_db):
     """Verifies that skipping more items than exist returns an empty list."""
     total_rooms = len(vacant_rooms_in_db)
-    response = authenticated_landlord_client.get(f'{room_url}?skip={total_rooms + 5}')
+    lodge_id = add_lodge_to_db.id
+    response = authenticated_landlord_client.get(f'{room_url}/{lodge_id}/rooms?skip={total_rooms + 5}')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -216,6 +220,5 @@ def test_landlord_cannot_create_occupied_room(authenticated_landlord_client, add
         json={'status': RoomStatus.OCCUPIED}
     )
     data = response.json()
-    print(data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert data['detail'] == 'Cannot update an occupied room. Terminate the lease first.'

@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from app.models.lease import Lease
 from app.schemas import user as schema_user
 from app.schemas.dashboard import DashboardFilters
+from app.schemas.lodge import RoomGenerator
 from app.services import user_service, lodge_service, tenant_services, room_service, lease_services, payment_service, \
     dashboard_service
 from app.schemas import tenantprofile as schema_tenant
@@ -240,6 +241,29 @@ def lodge_schema_factory():
     return _create
 
 @pytest.fixture
+def lodge_schema_with_room_generator_factory():
+    def _create(
+            name:str = 'Lodge Test',
+            address: str = 'Test Address',
+            default_rent: int = 250000,
+            prefix: str = '',
+            start_number: int = 1,
+            end_number: int = 5
+    ):
+        room_gen = RoomGenerator(
+            prefix=prefix,
+            start_number=start_number,
+            end_number=end_number,
+            default_rent=default_rent,
+            default_description='Test description'
+        )
+        return schema_lodge.LodgeCreate(
+            name=name, address=address,
+            room_generator=room_gen
+        )
+    return _create
+
+@pytest.fixture
 def add_landlord_to_db(test_db, mock_landlord_schema):
     """
     A pytest fixture that adds a landlord to the database.
@@ -331,7 +355,6 @@ def vacant_rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, add_lod
             room_in=rm_schema
         )
         db_rooms.append(new_room)
-    print(f"\n--- Fixture: rooms_in_ created {len(db_rooms)} tenants. First ID: {db_rooms[0].id}, Last ID: {db_rooms[-1].id} ---")
     return db_rooms
 
 @pytest.fixture
@@ -350,7 +373,6 @@ def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db):
         )
         new_tenant = tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
         db_tenants.append(new_tenant)
-    print(f"\n--- Fixture: tenants_in_db created {len(db_tenants)} tenants. First ID: {db_tenants[0].id}, Last ID: {db_tenants[-1].id} ---")
     return db_tenants
 
 @pytest.fixture
@@ -535,8 +557,6 @@ def leases_in_db(test_db, lease_schema_factory, lease_statuses, add_landlord_to_
             landlord_user=add_landlord_to_db
         )
         db_leases.append(new_lease)
-    print(
-        f"\n--- Fixture: leases_in_db created {len(db_leases)} tenants. First ID: {db_leases[0].id}, Last ID: {db_leases[-1].id} ---")
     return db_leases
 
 

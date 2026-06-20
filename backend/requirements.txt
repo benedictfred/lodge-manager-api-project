@@ -13,3 +13,4 @@ pydantic
 pytest
 pytest-cov
 httpx
+httpx2

@@ -2,6 +2,7 @@ import pytest
 from fastapi import status
 
 from test.conftest import base_url, add_lodge_to_db
+from test.test_room import room_url
 
 lodge_url = f'{base_url}/lodges'
 
@@ -31,7 +32,6 @@ def test_landlord_register_lodge_returns_200(authenticated_landlord_client, mock
 #                                                       expected_detail_part):
 #     """Tests that creating a lodge with invalid or missing data fails."""
 #     response = authenticated_landlord_client.post(f'{lodge_url}/register', json=invalid_payload)
-#     print(response.json())
 #     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 #     assert expected_detail_part in str(response.json())
 
@@ -224,3 +224,23 @@ def test_landlord_get_tenants_from_non_existent_lodge_returns_404(authenticated_
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert data['detail'] == 'Lodge could not be found'
+
+def test_landlord_create_lodge_with_rooms(authenticated_landlord_client,
+                                          lodge_schema_with_room_generator_factory):
+
+    lodge_schema = lodge_schema_with_room_generator_factory()
+    response = authenticated_landlord_client.post(f'{lodge_url}/register', json=lodge_schema.model_dump())
+    data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+
+    assert data['name'] == lodge_schema.name
+    assert data['address'] == lodge_schema.address
+    assert 'id' in data
+    assert 'landlord_id' in data
+
+    lodge_id = data['id']
+    response2 = authenticated_landlord_client.get(f'{room_url}/{lodge_id}/rooms')
+
+    assert response2.status_code == status.HTTP_200_OK
+    data = response2.json()
+    assert len(data) == 5

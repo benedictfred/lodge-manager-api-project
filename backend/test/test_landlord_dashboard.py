@@ -18,7 +18,6 @@ def test_landlord_dashboard_stats_paginated_returns_200(authenticated_landlord_c
     response = authenticated_landlord_client.get(url=f'{dashboard_url}/me/landlord/{lodge_id}')
     data = response.json()
     data_dict = json.dumps(data, indent=4)
-    print(data_dict)
 
     assert response.status_code == status.HTTP_200_OK
     assert 'financials' in data
@@ -56,7 +55,6 @@ def test_landlord_dashboard_pagination_skip_returns_200(authenticated_landlord_c
     response = authenticated_landlord_client.get(url=f'{dashboard_url}/me/landlord/{lodge_id}?skip=2')
     data = response.json()
     data_dict = json.dumps(data, indent=4)
-    print(data_dict)
 
     assert response.status_code == status.HTTP_200_OK
 
@@ -83,7 +81,6 @@ def test_landlord_dashboard_pagination_limit_returns_200(authenticated_landlord_
     response = authenticated_landlord_client.get(url=f'{dashboard_url}/me/landlord/{lodge_id}?limit=1')
     data = response.json()
     data_dict = json.dumps(data, indent=4)
-    print(data_dict)
     assert response.status_code == status.HTTP_200_OK
 
     total_rooms_in_arrays = (
@@ -108,7 +105,6 @@ def test_landlord_dashboard_pagination_exceed_limit_returns_200(authenticated_la
     response = authenticated_landlord_client.get(url=f'{dashboard_url}/me/landlord/{lodge_id}?limit=1000')
     data = response.json()
     data_dict = json.dumps(data, indent=4)
-    print(data_dict)
     assert response.status_code == status.HTTP_200_OK
 
     total_rooms_in_arrays = (
@@ -150,7 +146,6 @@ def test_landlord_dashboard_filter_room_status_returns_200(authenticated_landlor
     )
     data = response.json()
     data_dict = json.dumps(data, indent=4)
-    print(data_dict)
 
     base_rent = 5000
     room_filters_dict = {
@@ -199,7 +194,6 @@ def test_landlord_dashboard_filter_occupied_leases_returns_200(
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     data_dict = json.dumps(data, indent=4)
-    print(data_dict)
 
     occupied_arrays = data['occupied_rooms_lease']
 
@@ -235,7 +229,6 @@ def test_landlord_dashboard_empty_lodge_returns_200(authenticated_landlord_clien
     response = authenticated_landlord_client.get(url=f'{dashboard_url}/me/landlord/{lodge_id}')
     data = response.json()
     data_dict = json.dumps(data, indent=4)
-    print(data_dict)
     assert response.status_code == status.HTTP_200_OK
 
     assert data['financials']['potential_revenue'] == 0
