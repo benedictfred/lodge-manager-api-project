@@ -1,32 +1,11 @@
-# Byte-code
-__pycache__/
-*.pyc
-
-# IDE / Editor specific
-.idea/
-*.vscode/
 
 # Environment variables - VERY IMPORTANT
 .env
 
 # Database files - Do not commit data
 *.db
-*.sqlite3
 
-# Virtual environment
-venv/
-.venv/
-env/
 
 app/todos.py
-mentor_prompt.md
-Todo.md
-lodge_manager_plan.md
-frontend_architecture.md
-frontend_mock.html
 test_main.http
 
-# Testing and Coverage
-.coverage
-htmlcov/
-.pytest_cache/

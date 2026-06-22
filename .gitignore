@@ -1,0 +1,21 @@
+# IDE & Custom Settings
+.idea/
+.agents/
+.vscode/
+
+mentor_prompt.md
+Todo.md
+lodge_manager_plan.md
+frontend_architecture.md
+frontend_mock.html
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db

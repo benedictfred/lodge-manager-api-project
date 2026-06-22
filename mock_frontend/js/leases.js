@@ -92,7 +92,7 @@ async function populateDropdowns() {
     
     if (!roomsLoaded) {
         try {
-            const rooms = await apiFetch('/rooms/?skip=0&limit=100');
+            const rooms = await apiFetch(`/rooms/${activeLodgeId}/rooms?skip=0&limit=100`);
             const lodgeRooms = rooms.filter(r => r.lodge_id === activeLodgeId && r.status !== 'Occupied');
             const roomSelect = document.getElementById('lease-room');
             roomSelect.innerHTML = '<option value="">-- Select Available Room --</option>';
