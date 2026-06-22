@@ -4,6 +4,7 @@ Dependency injection module for the FastAPI application.
 Provides dependencies for database session management and user authentication.
 """
 import jwt
+from fastapi import Cookie
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -41,14 +42,14 @@ def get_db() -> Generator:
 
 def get_current_user(
         db: Session = Depends(get_db),
-        token: str = Depends(oauth_2)
+        access_token: str = Cookie(None)
 ):
     """
     Get the currently authenticated user from the token.
 
     Args:
         db (Session): The database session.
-        token (str): The OAuth2 access token.
+        access_token (str): The access token from the cookies object
 
     Returns:
         User: The authenticated user instance.
@@ -61,7 +62,7 @@ def get_current_user(
     try:
 
         payload = jwt.decode(
-            token,
+            access_token,
             key=settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )

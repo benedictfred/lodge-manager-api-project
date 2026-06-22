@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://10.72.64.167:8000/api/v1';
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
 // Unified fetch wrapper
 async function apiFetch(endpoint, options = {}) {

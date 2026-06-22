@@ -86,10 +86,7 @@ def auth_client_factory(client):
 
 
         token = security.create_access_token(subject=user_id)
-
-        client.headers = {
-            'Authorization': f'Bearer {token}'
-        }
+        client.cookies.set(name='access_token', value=token)
 
         return client
 

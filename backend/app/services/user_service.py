@@ -6,7 +6,7 @@ This module contains services for managing users, including authentication.
 import jwt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
-
+from fastapi import Response, Cookie
 from app.core.config import settings
 from app.crud.user import crud_user
 from app.core.enums import UserRole
@@ -71,6 +71,7 @@ def authenticate_user(db: Session, email: str, password: str):
 
 def login_authenticated_user(
         db: Session,
+        response: Response,
         email: str,
         password: str
 ):
@@ -78,6 +79,7 @@ def login_authenticated_user(
     Log in an authenticated user and generate an access token.
 
     Args:
+        response: for attaching cookies
         db (Session): The database session.
         email (str): The email address of the user.
         password (str): The plain text password.
@@ -98,15 +100,23 @@ def login_authenticated_user(
         subject=str(authenticated_user.id)
     )
 
+    response.set_cookie(
+        key='access_token',
+        value=access_token,
+        secure=True,
+        httponly=True
+    )
+    response.set_cookie(
+        key='refresh_token',
+        value=refresh_token,
+        secure=True,
+        httponly=True,
+        path="/api/v1/auth/refresh"
+    )
+    return authenticated_user
 
-    return {
-        'access_token': access_token,
-        'refresh_token': refresh_token,
-        'token_type': 'bearer'
-    }
 
-
-def refresh_access_token(db: Session, refresh_token: str):
+def refresh_access_token(db: Session, response: Response, refresh_token: str = Cookie(None)):
     try:
         payload = jwt.decode(
             refresh_token,
@@ -128,8 +138,10 @@ def refresh_access_token(db: Session, refresh_token: str):
 
     access_token = create_access_token(str(current_user.id))
 
-    return {
-        'access_token': access_token,
-        'refresh_token': refresh_token,
-        'token_type': 'bearer'
-    }
+    response.set_cookie(
+        key='access_token',
+        value=access_token,
+        secure=True,
+        httponly=True,
+    )
+    return current_user

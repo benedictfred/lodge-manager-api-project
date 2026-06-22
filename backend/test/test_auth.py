@@ -52,9 +52,8 @@ def test_login_user_returns_200(client, add_landlord_to_db, mock_landlord_schema
 
     assert response.status_code == status.HTTP_200_OK
 
-    assert 'access_token' in data
-    assert data['token_type'] == 'bearer'
-
+    assert data['id'] == add_landlord_to_db.id
+    assert data['role'] == 'Landlord'
 
 @pytest.mark.parametrize("username, password, error_detail, needs_db_user", [
     # Case 1: The user does NOT exist in the database. No fixture needed.

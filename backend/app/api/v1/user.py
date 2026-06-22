@@ -4,8 +4,11 @@ API routes for user management.
 Provides endpoints for user registration (landlords and tenants) and authentication (login).
 """
 from fastapi import APIRouter, Depends
+from fastapi import Cookie
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from starlette.responses import Response
+
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.schemas import user as schema_user
@@ -55,8 +58,9 @@ def register_tenant(
 
 
 
-@router.post('/login', response_model=schema_user.Token)
+@router.post('/login', response_model=schema_user.UserResponse)
 def login_user(
+        response: Response,
         db: Session = Depends(get_db),
         form_data: OAuth2PasswordRequestForm = Depends()
 ):
@@ -64,18 +68,22 @@ def login_user(
     Authenticate a user and return an access token.
 
     Args:
+        response:
         db (Session): The database session.
         form_data (OAuth2PasswordRequestForm): The login credentials (username/email and password).
 
     Returns:
         schema_user.Token: The authentication token.
     """
-    return user_service.login_authenticated_user(db, email=form_data.username.lower(), password=form_data.password)
+
+    return user_service.login_authenticated_user(db, email=form_data.username.lower(),
+                                                 response=response, password=form_data.password)
 
 
-@router.post('/refresh', response_model=schema_user.Token)
-def refresh_token(request: schema_user.RefreshTokenRequest, db: Session = Depends(get_db)):
-    return user_service.refresh_access_token(db, request.refresh_token)
+@router.post('/refresh', response_model=schema_user.UserResponse)
+def refresh_token(response: Response, refresh_token: str = Cookie(None), db: Session = Depends(get_db)):
+    return user_service.refresh_access_token(db, response=response, refresh_token=refresh_token)
+
 
 @router.get('/me', response_model=schema_user.UserResponse)
 def get_me(
