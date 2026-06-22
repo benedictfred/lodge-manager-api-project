@@ -123,8 +123,9 @@ def update_room_details(db: Session, room_id: int, landlord_id: int, update_data
     if room.status == RoomStatus.OCCUPIED:
         raise RoomIsOccupiedError(occupied_room_no=room.room_no)
 
-    if update_data.status not in constants.UPDATABLE_ROOM_STATUSES:
-        raise NotUpdatableOptionError(update_status=update_data.status)
+    if update_data.status and update_data.status not in constants.UPDATABLE_ROOM_STATUSES:
+        raise NotUpdatableOptionError(allowed_options=constants.UPDATABLE_ROOM_STATUSES,
+                                      update_status=update_data.status)
 
     return crud_room.update(db, db_obj=room, update_data=update_data)
 
@@ -145,8 +146,12 @@ def bulk_update_base_rent(
     )
 
     if not to_update_rooms:
-        raise RoomNotFoundError()
+        room_nos_str = ', '.join(str(n) for n in update_data.room_ids)
+        raise RoomNotFoundError(room_nos_str)
 
+    if len(to_update_rooms) != len(update_data.room_ids):
+
+        raise RoomNotFoundError(detail='One or more rooms')
 
     for room in to_update_rooms:
         if room.status  == RoomStatus.OCCUPIED:

@@ -3,10 +3,11 @@ API routes for user management.
 
 Provides endpoints for user registration (landlords and tenants) and authentication (login).
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user
+from app.models.user import User
 from app.schemas import user as schema_user
 from app.schemas import tenantprofile as schema_tenant
 from app.services import user_service, tenant_services
@@ -75,3 +76,9 @@ def login_user(
 @router.post('/refresh', response_model=schema_user.Token)
 def refresh_token(request: schema_user.RefreshTokenRequest, db: Session = Depends(get_db)):
     return user_service.refresh_access_token(db, request.refresh_token)
+
+@router.get('/me', response_model=schema_user.UserResponse)
+def get_me(
+        authenticated_user: User = Depends(get_current_user)
+):
+    return authenticated_user

@@ -63,7 +63,7 @@ class RentAmtExceededError(BaseMaxLimitReachedError):
 class BaseNotFoundError(BaseLodgeOpsError):
     def __init__(self, name:str):
         self.detail = f'{name.title()} could not be found'
-        super().__init__(detail=self.detail, status_code=404, meta=self.meta)
+        super().__init__(detail=self.detail, status_code=404)
         
         
 class UserNotFoundError(BaseNotFoundError):
@@ -76,11 +76,12 @@ class LodgeNotFoundError(BaseNotFoundError):
 
 
 class RoomNotFoundError(BaseNotFoundError):
-    def __init__(self, room_no: str = None):
-        self.meta = {
+    def __init__(self, room_no: str = None, detail: str = ''):
+        self.meta = ({
             'room_no': room_no
-        }
-        super().__init__(name='Room' )
+        })
+        self.detail = detail
+        super().__init__(name='Room' if not detail else detail)
 
 class LeaseNotFoundError(BaseNotFoundError):
     def __init__(self):

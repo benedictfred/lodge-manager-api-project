@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 
 from app.core.enums import RoomStatus
-from test.conftest import base_url, add_lodge_to_db
+from test.conftest import base_url, add_lodge_to_db, vacant_rooms_in_db
 
 room_url = f'{base_url}/rooms'
 
@@ -140,7 +140,7 @@ def test_get_rooms_pagination_limit(authenticated_landlord_client, add_lodge_to_
     assert len(data) == 2
 
 
-def test_get_rooms_pagination_skip(authenticated_landlord_client,add_lodge_to_db, vacant_rooms_in_db):
+def test_get_rooms_pagination_skip(authenticated_landlord_client, add_lodge_to_db, vacant_rooms_in_db):
     """Verifies that the skip parameter correctly offsets the returned items."""
     lodge_id = add_lodge_to_db.id
     response = authenticated_landlord_client.get(f'{room_url}/{lodge_id}/rooms?skip=2&limit=1')
@@ -160,6 +160,7 @@ def test_get_rooms_pagination_skip_exceeds_total(authenticated_landlord_client, 
 
     assert response.status_code == status.HTTP_200_OK
     assert len(data) == 0
+
 
 def test_tenant_cannot_create_room_returns_403(authenticated_tenant_client, mock_room_schema):
     """
@@ -199,6 +200,7 @@ def test_landlord_update_room_scenarios_returns_200(authenticated_landlord_clien
         else:
             assert data[key] == value
 
+
 def test_tenant_cannot_update_room_returns_403(authenticated_tenant_client, add_room_to_db, mock_update_room_schema):
     """
     Tests that a tenant is forbidden from updating room details.
@@ -212,6 +214,7 @@ def test_tenant_cannot_update_room_returns_403(authenticated_tenant_client, add_
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert data['detail'] == 'Only landlords are allowed.'
 
+
 def test_landlord_cannot_create_occupied_room(authenticated_landlord_client, add_active_lease_to_db):
     room_id = add_active_lease_to_db.room_id
 
@@ -223,65 +226,89 @@ def test_landlord_cannot_create_occupied_room(authenticated_landlord_client, add
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert data['detail'] == 'Cannot update an occupied room. Terminate the lease first.'
 
-def test_bulk_update_base_rent_returns_200(authenticated_landlord_client, rooms_in_db, add_lodge_to_db):
+
+def test_bulk_update_base_rent_returns_200(authenticated_landlord_client, vacant_rooms_in_db, add_lodge_to_db):
     """
     Tests the happy path for bulk updating base rent on multiple vacant rooms.
     """
     lodge_id = add_lodge_to_db.id
     # Take first 3 rooms
-    room_ids = [rooms_in_db[0].id, rooms_in_db[1].id, rooms_in_db[2].id]
+    room_ids = [vacant_rooms_in_db[0].id, vacant_rooms_in_db[1].id, vacant_rooms_in_db[2].id]
     new_rent = 500000
 
     payload = {
         "room_ids": room_ids,
-        "base_rent_price": new_rent
+        "base_rent": new_rent
     }
 
     response = authenticated_landlord_client.patch(
         url=f'{room_url}/{lodge_id}/rooms/bulk',
         json=payload
     )
-    assert response.status_code == status.HTTP_200_OK
     data = response.json()
+    print(data)
+    assert response.status_code == status.HTTP_200_OK
     assert len(data) == 3
     for room in data:
         assert room['base_rent_price'] == new_rent
 
 
-def test_bulk_update_with_occupied_room_returns_400(authenticated_landlord_client, rooms_in_db, add_active_lease_to_db, add_lodge_to_db):
+def test_bulk_update_with_occupied_room_returns_400(authenticated_landlord_client, vacant_rooms_in_db, add_active_lease_to_db,
+                                                    add_lodge_to_db):
     """
     Tests that bulk updating fails if even one room is occupied, proving atomic rollback.
     """
     lodge_id = add_lodge_to_db.id
     occupied_room_id = add_active_lease_to_db.room_id
-    vacant_room_id = rooms_in_db[0].id
+    vacant_room_id = vacant_rooms_in_db[0].id
 
-    if vacant_room_id == occupied_room_id:
-        vacant_room_id = rooms_in_db[1].id
+
 
     payload = {
         "room_ids": [vacant_room_id, occupied_room_id],
-        "base_rent_price": 600000
+        "base_rent": 600000
     }
 
     response = authenticated_landlord_client.patch(
         url=f'{room_url}/{lodge_id}/rooms/bulk',
         json=payload
     )
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_bulk_update_invalid_room_returns_404(authenticated_landlord_client, add_lodge_to_db):
+
+
+def test_bulk_update_invalid_room_returns_404(authenticated_landlord_client, add_lodge_to_db, vacant_rooms_in_db):
     """
-    Tests that passing a non-existent room ID returns 404.
+    Tests that passing a non-existent room ID returns 404
     """
     lodge_id = add_lodge_to_db.id
+
     payload = {
         "room_ids": [99999],
-        "base_rent_price": 500000
+        "base_rent": 500000
     }
     response = authenticated_landlord_client.patch(
         url=f'{room_url}/{lodge_id}/rooms/bulk',
         json=payload
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+
+def test_bulk_update_owned_and_not_owned_room_returns_404(authenticated_landlord_client, add_room_to_db, add_lodge_to_db,
+                                                          vacant_rooms_in_db):
+    lodge_id = add_lodge_to_db.id
+    vacant_room_id = vacant_rooms_in_db[0].id
+    payload = {
+        "room_ids": [vacant_room_id, 99999],
+        "base_rent": 500000
+    }
+    response = authenticated_landlord_client.patch(
+        url=f'{room_url}/{lodge_id}/rooms/bulk',
+        json=payload
+    )
+    data = response.json()
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert data['detail'] == 'One Or More Rooms could not be found'

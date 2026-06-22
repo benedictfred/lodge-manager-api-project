@@ -78,28 +78,14 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         Returns:
             Lease: The newly created lease.
         """
-        #mark the room's status as occupied if in occupied allowed status
-        #stage the lease for commit
-        #flush to get lease id for creating first payment record
-        #add the lease id to the payment record
-        #if anything fails while commit the record , fallback or rollback the transaction
-        _occupied_allowed_statuses = [LeaseStatus.ACTIVE, LeaseStatus.PENDING_TERMINATION, LeaseStatus.OVERDUE]
-        try:
-            db_lease = Lease(**lease_data.model_dump(exclude={'total_amt_paid'}))
-            db.add(db_lease)
-            db.flush()
+        db_lease = self.model(**lease_data.model_dump(exclude={'total_amt_paid'}))
+        db_payment = Payment(amount_paid=lease_data.total_amt_paid)
+        db_lease.payments.append(db_payment)
 
-            db_payment = Payment(lease_id=db_lease.id, amount_paid=lease_data.total_amt_paid)
-            db.add(db_payment)
-
-            room.status = RoomStatus.OCCUPIED if db_lease.computed_status in _occupied_allowed_statuses else RoomStatus.VACANT
-            db.commit()
-            db.refresh(db_lease)
-
-
-        except Exception as e:
-            db.rollback()
-            raise e
+        db.add(db_lease)
+        room.status = RoomStatus.OCCUPIED
+        db.commit()
+        db.refresh(db_lease)
 
         return db_lease
 

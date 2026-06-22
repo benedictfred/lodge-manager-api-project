@@ -7,15 +7,13 @@ from typing import Dict, Any, Optional
 
 from sqlalchemy import select
 
-from app.core.enums import UserRole
-from app.core.security import get_password_hash
-from app.crud.user import crud_user
+
 from app.models.tenantprofile import TenantProfile
 from app.models.user import User
 from app.schemas.tenantprofile import TenantProfileCreate, TenantProfileUpdate, TenantInfoUpdate
-from sqlalchemy.orm import Session, joinedload
-from app.crud.base_crud import CRUDBase, UpdateSchemaType, ModelType
-from app.schemas.user import UserCreate, UserInternal, UserUpdate
+from sqlalchemy.orm import Session
+from app.crud.base_crud import CRUDBase, ModelType
+from app.schemas.user import  UserInternal, UserUpdate
 
 
 class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfileUpdate]):
@@ -38,23 +36,13 @@ class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfi
         Returns:
             TenantProfile: The newly created tenant profile.
         """
-        try:
-            db_user = User(**internal_user.model_dump())
-            db.add(db_user)
-            db.flush()
-
-            tenant_profile = tenant_in.model_dump(exclude={'user_info'})
-            tenant_profile['tenant_info']['user_id'] = db_user.id
-
-            db_tenant = TenantProfile(**tenant_profile.get('tenant_info'))
-            db.add(db_tenant)
-            db.commit()
-            db.refresh(db_tenant)
-
-            return db_tenant
-        except Exception as e:
-            db.rollback()
-            raise e
+        db_user = User(**internal_user.model_dump())
+        db_tenant = self.model(**tenant_in.tenant_info.model_dump())
+        db_user.tenant_profile = db_tenant
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_tenant)
+        return db_tenant
 
     def get_tenants(self, db: Session, lodge_id: int, skip: int = 0, max_limit:int =50):
         """
@@ -113,7 +101,6 @@ class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfi
         except Exception as e:
             db.rollback()
             raise e
-
 
 
 

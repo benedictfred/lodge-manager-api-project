@@ -72,9 +72,7 @@ def authenticated_landlord_client(auth_client_factory, add_landlord_to_db, mock_
     A pytest fixture that provides an authenticated client for a landlord.
     """
     landlord  = add_landlord_to_db
-
     client = auth_client_factory(user_id=landlord.id)
-    client.landlord = landlord
 
     return client
 
@@ -338,7 +336,7 @@ def lease_statuses():
 @pytest.fixture
 def vacant_rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, add_lodge_to_db):
     """
-    A pytest fixture that adds multiple rooms to a lodge in the database.
+    A pytest fixture that adds multiple vacant rooms to a lodge in the database.
     """
     max_rooms = 20
     db_rooms = []

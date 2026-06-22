@@ -127,3 +127,29 @@ def test_register_tenant_lodge_not_exist_returns_404(client, mock_tenant_schema)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert data['detail'] == 'Lodge could not be found'
+
+
+def test_get_me_returns_authenticated_user(authenticated_landlord_client, add_landlord_to_db):
+
+    response = authenticated_landlord_client.get(f'{auth_url_base}/me')
+    data = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert data['id'] == add_landlord_to_db.id
+    assert data['role'] == 'Landlord'
+
+def test_get_me_not_token_returns_401(client):
+    response = client.get(f'{auth_url_base}/me')
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+def test_get_me_not_exist_returns_404(test_db, authenticated_landlord_client, add_landlord_to_db):
+    test_db.delete(add_landlord_to_db)
+    test_db.commit()
+
+    response = authenticated_landlord_client.get(f'{auth_url_base}/me')
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+
+
