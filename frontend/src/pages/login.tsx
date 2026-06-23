@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { LoginForm } from "../components/auth/login-form";
 
 export default function LoginPage() {
@@ -29,7 +30,7 @@ export default function LoginPage() {
           <div className="lg:hidden h-1 bg-terracotta-400 w-8 mb-8" />
           <div className="mb-10 text-left">
             <h1 className="font-serif text-3xl font-bold text-charcoal-900 mb-3 tracking-tight">
-              LodgeManager
+              LodgeOps
             </h1>
             <p className="text-charcoal-500 font-sans">
               Sign in to your administrative dashboard
@@ -39,15 +40,13 @@ export default function LoginPage() {
             <LoginForm />
           </div>
           <div className="mt-8 text-center sm:text-left text-sm font-sans pt-8 border-t border-charcoal-100">
-            <span className="text-charcoal-500">
-              Authorized personnel only.{" "}
-            </span>
-            <a
-              href="#"
-              className="text-terracotta-500 font-medium hover:text-terracotta-600 transition-colors"
+            <span className="text-charcoal-500">Already have an account?</span>
+            <Link
+              to="/register"
+              className="ml-1 text-terracotta-500 font-medium hover:text-terracotta-600 transition-colors"
             >
-              Request Access
-            </a>
+              Log In
+            </Link>
           </div>
         </div>
       </div>

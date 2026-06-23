@@ -11,8 +11,11 @@ import {
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { loginSchema, type LoginFormData } from "../../lib/form-schemas";
+import { useLogin } from "../../hooks/auth";
 
 export function LoginForm() {
+  const { mutate, isPending } = useLogin();
+
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -22,7 +25,7 @@ export function LoginForm() {
   });
 
   const onSubmit = (data: LoginFormData) => {
-    console.log("Login form submitted:", data);
+    mutate(data);
   };
 
   return (
@@ -67,8 +70,8 @@ export function LoginForm() {
         <Button
           type="submit"
           className="w-full"
-          isLoading={form.formState.isSubmitting}
-          disabled={form.formState.isSubmitting}
+          isLoading={isPending}
+          disabled={isPending}
         >
           Sign In
         </Button>
