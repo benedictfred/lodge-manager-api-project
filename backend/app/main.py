@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.core.config import settings
+from app.core.config import settings, PROJECT_ROOT
 from app.api.v1.user import router as user_router
 from app.api.v1.lodges import router as lodge_router
 from app.api.v1.rooms import router as room_router
@@ -59,25 +59,9 @@ app = FastAPI(
     exception_handlers=lodge_ops_handlers
 )
 
-# Explicitly list the allowed origins instead of using '*'
-origins = [
-    "http://localhost:5173", # Default for Vite React apps
-    "http://localhost:3000", # Default for Create React App
-    "http://localhost:8080", # Local python server
-    "http://127.0.0.1:8080", # Local python server via IP
-    "http://localhost:8000", # FastAPI itself (if served statically)
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1:5500", # VSCode Live Server
-    "http://localhost:5500", # VSCode Live Server
-    "http://localhost:63342", # PyCharm Built-in Server
-    "http://127.0.0.1:63342", # PyCharm Built-in Server
-    "null",                  # Opening file:/// directly in browser
-    "*"
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  
+    allow_origins=settings.final_cors_origins, #allowed app origins for interacting with the backend
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*']
@@ -102,8 +86,18 @@ app.include_router(tenant_dashboard_router, prefix='/api/v1/dashboard-tenant', t
 
 app.include_router(invite_router, prefix='/api/v1/invites', tags=['Invites'])
 
+import os
+from fastapi.staticfiles import StaticFiles
+
+# Target mock_frontend in project root (parent of backend)
+mock_frontend_path = os.path.join(os.path.dirname(PROJECT_ROOT), "mock_frontend")
+if os.path.exists(mock_frontend_path):
+    app.mount("/mock", StaticFiles(directory=mock_frontend_path, html=True), name="mock")
+
 @app.get("/healthy")
 def health_status():
     return {"message": f"Your {settings.PROJECT_NAME} is working well"}
+
+
 
 
