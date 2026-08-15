@@ -3,11 +3,16 @@
 .agents/
 .vscode/
 
+# Planning & Strategy Docs
 mentor_prompt.md
 Todo.md
 lodge_manager_plan.md
 frontend_architecture.md
 frontend_mock.html
+ORIGINAL_REQUEST.md
+marketability_analysis.md
+gtm_marketing_playbook.md
+unizik_revenue_projection.md
 
 # Python
 .venv/
