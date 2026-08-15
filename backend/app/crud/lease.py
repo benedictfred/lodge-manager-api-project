@@ -91,21 +91,19 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
 
         return db_lease
 
-    def get_active_room_and_tenant_lease(self, db: Session, room_id: int, tenant_id: int):
+    def get_active_lease_for_room(self, db: Session, room_id: int):
         """
-        Get an active lease for a specific room and tenant.
+        Get an active lease for a specific room
 
         Args:
             db (Session): The database session.
             room_id (int): The ID of the room.
-            tenant_id (int): The ID of the tenant.
 
         Returns:
             Lease: The active lease or None.
         """
         stmt =  select(self.model).where(
             self.model.room_id == room_id,
-            self.model.tenant_id == tenant_id,
             self.model.status.is_(None),
             self.model.end_date >= date.today()
         )

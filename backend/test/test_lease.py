@@ -88,11 +88,11 @@ def test_landlord_create_lease_room_already_has_active_lease_returns_400(authent
     mock_lease_schema.end_date = mock_lease_schema.start_date + timedelta(days=180) # 6 months later
     
     lease_payload= mock_lease_schema.model_dump(mode='json')
-    response_second = authenticated_landlord_client.post(lease_url, json=lease_payload)
-    data_second = response_second.json()
+    response = authenticated_landlord_client.post(lease_url, json=lease_payload)
+    data = response.json()
 
-    assert response_second.status_code == status.HTTP_400_BAD_REQUEST
-    assert "Lease is already Active" in data_second['detail']
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Lease is already Active" in data['detail']
 
 
 # --- Pagination Tests for Getting Leases (Landlord) ---

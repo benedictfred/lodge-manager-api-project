@@ -4,7 +4,7 @@ Module providing lease-related business logic.
 This module contains services for managing leases.
 """
 from typing import Optional
-from app.core.enums import LeaseStatus
+from app.core.enums import LeaseStatus, RoomStatus
 from app.crud.tenantprofile import crud_tenant
 from app.models.lease import Lease
 from app.models.room import Room
@@ -15,7 +15,8 @@ from app.schemas.lease import LeaseCreate, LeaseUpdate
 from app.services import lodge_service, room_service
 from app.crud.lease import crud_lease
 from app.core.exceptions import (RoomNotFoundError,
-                                 LeaseNotFoundError, InvalidLeaseActionError, TenantProfileNotFoundError)
+                                 LeaseNotFoundError, InvalidLeaseActionError, TenantProfileNotFoundError,
+                                 RoomIsOccupiedError)
 
 
 def create_new_lease(
@@ -41,10 +42,9 @@ def create_new_lease(
     if not tenant or room.lodge_id != tenant.lodge_id:
         raise TenantProfileNotFoundError()
 
-    active_lease = crud_lease.get_active_room_and_tenant_lease(
+    active_lease = crud_lease.get_active_lease_for_room(
         db,
-        room_id=room.id,
-        tenant_id=tenant.id
+        room_id=room.id
     )
 
     if active_lease:
