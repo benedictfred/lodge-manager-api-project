@@ -22,7 +22,8 @@ from app.services.lodge_service import is_landlord, is_tenant
 
 #helps to extract token from http request
 oauth_2 = OAuth2PasswordBearer(
-    tokenUrl='/api/v1/auth/login'
+    tokenUrl='/api/v1/auth/login',
+    auto_error=False
 )
 
 
@@ -42,27 +43,21 @@ def get_db() -> Generator:
 
 def get_current_user(
         db: Session = Depends(get_db),
-        access_token: str = Cookie(None)
+        access_token: str = Cookie(None),
+        bearer_token: str = Depends(oauth_2)
 ):
     """
-    Get the currently authenticated user from the token.
-
-    Args:
-        db (Session): The database session.
-        access_token (str): The access token from the cookies object
-
-    Returns:
-        User: The authenticated user instance.
-
-    Raises:
-        HTTPException: If the credentials could not be validated.
-        UserNotFoundError: If the user is not found or inactive.
+    Get the currently authenticated user from cookie or Authorization header.
     """
+    token = access_token or bearer_token
+
+    if not token:
+        raise InvalidCredentialsError()
     
     try:
 
         payload = jwt.decode(
-            access_token,
+            token,
             key=settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
