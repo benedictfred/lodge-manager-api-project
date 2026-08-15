@@ -1,115 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LodgeOps - Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Lodge Ops - Property Management Dashboard</title>
+    <!-- Tailwind CSS v3 with plugins -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="css/style.css"/>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+              },
+              colors: {
+                primary: '#2563eb',
+                surface: {
+                  DEFAULT: '#f8f9ff',
+                  container: {
+                    lowest: '#ffffff',
+                    low: '#eff4ff',
+                  }
+                },
+                status: {
+                  overdue: '#ef4444',
+                  owing: '#ec4899',
+                  safe: '#10b981',
+                  vacant: '#3b82f6'
+                }
+              },
+              borderRadius: {
+                'custom': '8px',
+              }
+            }
+          }
+        }
+    </script>
+    <style data-purpose="custom-scroll">
+        ::-webkit-scrollbar {
+          width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+    </style>
 </head>
-<body>
-    <div class="layout fade-in">
-        <!-- SIDEBAR -->
-        <aside class="sidebar" id="sidebar">
-            <div class="logo"><div style="display:flex; align-items:center;">Lodge<span>Ops</span></div></div>
-            <a href="dashboard.html" class="nav-item active"><span>Dashboard</span></a>
-            <a href="rooms.html" class="nav-item"><span>Rooms</span></a>
-            <a href="leases.html" class="nav-item"><span>Leases</span></a>
-            <a href="payments.html" class="nav-item"><span>Payments</span></a>
-            <a href="tenants.html" class="nav-item"><span>Active Tenants</span></a>
-            <a href="tenant-approvals.html" class="nav-item"><span>Pending Approvals</span></a>
-            <div class="sidebar-bottom">
-                <a href="lodges.html" class="nav-item" style="color:var(--text-secondary);"><span>Switch Lodge</span></a>
-                <div class="nav-item" style="color:var(--owing); cursor:pointer;" onclick="logout()"><span>Log Out</span></div>
+<body class="bg-surface font-sans text-slate-900 antialiased">
+    <div class="flex min-h-screen">
+        <!-- COMPONENT: Sidebar -->
+        <aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-slate-200 flex flex-col z-50" data-purpose="sidebar" id="sidebar">
+            <div class="p-6">
+                <!-- COMPONENT: Logo -->
+                <div class="flex items-center gap-2 mb-8">
+                    <span class="text-2xl font-bold text-primary tracking-tight">Lodge</span>
+                    <span class="text-sm font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-md">Ops</span>
+                </div>
+                <!-- COMPONENT: Navigation -->
+                <nav class="space-y-1">
+                    <a class="flex items-center gap-3 bg-blue-50 text-primary border-l-4 border-primary px-4 font-medium transition-all py-4 hover:bg-blue-100" href="dashboard.html">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        Dashboard
+                    </a>
+                    <a class="flex items-center gap-3 text-slate-500 px-4 hover:bg-slate-50 hover:text-primary transition-colors py-4 rounded-r-md" href="rooms.html">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        Rooms
+                    </a>
+                    <a class="flex items-center gap-3 text-slate-500 px-4 hover:bg-slate-50 hover:text-primary transition-colors py-4 rounded-r-md" href="leases.html">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        Leases
+                    </a>
+                    <a class="flex items-center gap-3 text-slate-500 px-4 hover:bg-slate-50 hover:text-primary transition-colors py-4 rounded-r-md" href="payments.html">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        Payments
+                    </a>
+                    <a class="flex items-center gap-3 text-slate-500 px-4 hover:bg-slate-50 hover:text-primary transition-colors py-4 rounded-r-md" href="tenants.html">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        Active Tenants
+                    </a>
+                    <a class="flex items-center gap-3 text-slate-500 px-4 hover:bg-slate-50 hover:text-primary transition-colors py-4 rounded-r-md" href="tenant-approvals.html">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        Pending Approvals
+                    </a>
+                </nav>
+            </div>
+            <!-- COMPONENT: SidebarFooter -->
+            <div class="mt-auto p-6 border-t border-slate-100 space-y-6">
+                <a href="lodges.html" class="block w-full text-left text-sm font-medium text-slate-500 hover:text-primary transition-colors py-2.5">Switch Property</a>
+                <button onclick="logout()" class="w-full text-left text-sm font-medium text-slate-500 hover:text-red-500 transition-colors py-2.5">Log Out</button>
             </div>
         </aside>
 
-        <!-- MAIN CONTENT -->
-        <main class="main">
-            <header class="page-header slide-up">
+        <!-- COMPONENT: MainLayout -->
+        <main class="flex-1 ml-[240px]">
+            <!-- COMPONENT: Header -->
+            <header class="sticky top-0 h-20 bg-surface/80 backdrop-blur-md flex items-center justify-between px-8 z-40 border-b border-slate-200/50" data-purpose="top-nav">
                 <div>
-                    <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('mobile-open')">☰</button>
-                    <h1 class="page-title">Dashboard Overview</h1>
-                    <p class="page-subtitle" id="lodge-name-display">Loading...</p>
+                    <h1 class="text-2xl font-bold text-slate-800">Property Overview</h1>
+                    <p class="text-sm text-slate-500 font-medium capitalize" id="lodge-name-display">Loading...</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-purple-100 transition-colors">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 11-2 0 1 1 0 012 0zM8 16v-1a1 1 0 10-2 0v1a1 1 0 102 0zM13.464 15.657a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1z"></path></svg>
+                        AI Insights
+                    </button>
+                    <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+                        <div class="w-10 h-10 bg-blue-600 text-white flex items-center justify-center rounded-full font-bold text-xs">AD</div>
+                        <span class="text-sm font-semibold text-slate-700">Admin</span>
+                    </div>
                 </div>
             </header>
 
             <div id="toast-container" class="toast-container"></div>
 
-            <!-- FINANCIAL STRIP -->
-            <div class="fin-strip slide-up" style="animation-delay: 0.1s;">
-                <div class="card glass-panel fin-item">
-                    <div class="fin-label">Potential Revenue</div>
-                    <div class="fin-amount" id="fin-potential">0.00</div>
-                </div>
-                <div class="card glass-panel fin-item">
-                    <div class="fin-label">Expected Now</div>
-                    <div class="fin-amount" id="fin-expected" style="color:var(--accent-base);">0.00</div>
-                </div>
-                <div class="card glass-panel fin-item">
-                    <div class="fin-label">Collected</div>
-                    <div class="fin-amount" id="fin-collected" style="color:var(--safe);">0.00</div>
-                </div>
-                <div class="card glass-panel fin-item" style="background:var(--owing-bg); border-color:var(--owing-border);">
-                    <div class="fin-label" style="color:var(--owing)">Unpaid Rent</div>
-                    <div class="fin-amount" id="fin-unpaid" style="color:var(--owing);">0.00</div>
-                </div>
-            </div>
-
-            <!-- STATS ROW -->
-            <div class="stats-row slide-up" style="animation-delay: 0.2s;">
-                <div class="glass-panel" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                    <div style="font-size:48px; font-weight:700; font-family:'Outfit', sans-serif;" id="fact-rooms">0</div>
-                    <div style="color:var(--text-secondary); font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px;">Total Rooms</div>
-                </div>
-                <div class="glass-panel" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                    <div style="font-size:48px; font-weight:700; font-family:'Outfit', sans-serif;" id="fact-tenants">0</div>
-                    <div style="color:var(--text-secondary); font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px;">Total Tenants</div>
-                </div>
-                <div class="glass-panel" style="display:flex; align-items:center; justify-content:center; gap: 24px; padding: 24px;">
-                    <div class="occupancy-ring" style="width: 80px; height: 80px;">
-                        <svg viewBox="0 0 100 100">
-                            <circle class="ring-bg" cx="50" cy="50" r="45"></circle>
-                            <circle class="ring-fill" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283" id="occ-ring"></circle>
-                        </svg>
-                        <div class="occupancy-text" id="occ-text" style="font-size: 20px;">0%</div>
+            <div class="p-8 space-y-10">
+                <!-- COMPONENT: StatGrid -->
+                <section class="grid grid-cols-4 gap-6" data-purpose="stat-grid">
+                    <!-- Occupancy Chart Card -->
+                    <div class="bg-white p-6 rounded-custom border border-slate-200 shadow-sm flex items-center gap-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                        <div class="relative w-16 h-16 flex-shrink-0 flex items-center justify-center">
+                            <svg class="w-full h-full transform -rotate-90 absolute inset-0">
+                                <circle class="text-slate-100" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+                                <circle class="text-emerald-500" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="175.9" stroke-width="4" id="occ-ring"></circle>
+                            </svg>
+                            <span id="occ-text" class="text-sm font-bold text-slate-800 relative z-10">0%</span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-500 font-medium">Current Occupancy</p>
+                        </div>
                     </div>
-                    <div>
-                        <div style="color:var(--text-secondary); font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px;">Occupancy</div>
+                    <div class="bg-white p-6 rounded-custom border border-slate-200 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                        <p class="text-3xl font-bold text-slate-800" id="fact-rooms">0</p>
+                        <p class="text-xs text-slate-500 font-medium mt-1">Total Rooms</p>
                     </div>
-                </div>
+                    <div class="bg-white p-6 rounded-custom border border-slate-200 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                        <p class="text-3xl font-bold text-slate-800" id="fact-tenants">0</p>
+                        <p class="text-xs text-slate-500 font-medium mt-1">Total Tenants</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-custom border border-slate-200 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                        <p class="text-3xl font-bold text-slate-800" id="fact-pending-moveouts">0</p>
+                        <p class="text-xs text-slate-500 font-medium mt-1">Pending Move-outs</p>
+                    </div>
+                </section>
+
+                <!-- COMPONENT: FinancialSummary -->
+                <section class="bg-white rounded-custom border border-slate-200 shadow-sm p-6 overflow-x-auto bg-slate-50/50" data-purpose="revenue-metrics">
+                    <div class="flex items-center justify-between min-w-[800px]">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Potential Revenue</span>
+                            <span class="font-bold text-slate-800 text-2xl" id="fin-potential">₦0.00</span>
+                        </div>
+                        <div class="h-10 w-px bg-slate-100"></div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Forecasted Revenue</span>
+                            <span class="font-bold text-2xl text-primary" id="fin-forecasted">₦0.00</span>
+                        </div>
+                        <div class="h-10 w-px bg-slate-100"></div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Expected (Due Now)</span>
+                            <span class="font-bold text-status-owing text-2xl" id="fin-expected">₦0.00</span>
+                        </div>
+                        <div class="h-10 w-px bg-slate-100"></div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Collected</span>
+                            <span class="font-bold text-status-safe text-2xl" id="fin-collected">₦0.00</span>
+                        </div>
+                        <div class="h-10 w-px bg-slate-100"></div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Unpaid Rent</span>
+                            <span class="font-bold text-status-overdue text-2xl" id="fin-unpaid">₦0.00</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- COMPONENT: RoomFilters -->
+                <section class="space-y-6" data-purpose="dashboard-filters">
+                    <div class="flex flex-wrap items-center justify-between gap-6">
+                        <div class="flex bg-slate-100/50 p-1 rounded-lg border border-slate-200">
+                            <button class="filter-chip px-5 py-2 text-sm font-semibold bg-white text-slate-800 rounded-md shadow-sm border border-slate-200 transition-colors active" data-filter="all">All Rooms</button>
+                            <button class="filter-chip px-5 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors hover:bg-white/80 rounded-md" data-filter="Chase Rent">Chase Rent</button>
+                            <button class="filter-chip px-5 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors hover:bg-white/80 rounded-md" data-filter="Overdue">Overdue</button>
+                            <button class="filter-chip px-5 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors hover:bg-white/80 rounded-md" data-filter="Expiring">Expiring Soon</button>
+                            <button class="filter-chip px-5 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors hover:bg-white/80 rounded-md" data-filter="Vacant">Vacant</button>
+                            <button class="filter-chip px-5 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors hover:bg-white/80 rounded-md" data-filter="Maintenance">Maintenance</button>
+                        </div>
+                        <div class="relative w-full max-w-md">
+                            <input id="search-input" class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-sm transition-all" placeholder="Search by room no or tenant..." type="text"/>
+                            <svg class="w-4 h-4 absolute right-3 top-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                        </div>
+                    </div>
+                    <p class="text-sm font-medium text-slate-500" id="results-count">Showing 0 rooms</p>
+                </section>
+
+                <!-- COMPONENT: RoomGrid -->
+                <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-12" id="dashboard-grid" data-purpose="room-grid">
+                    <!-- Dynamic Room Cards Injected by JS -->
+                </section>
             </div>
 
-            <!-- FILTERS BAR -->
-            <div class="filters-bar slide-up" style="animation-delay: 0.3s;">
-                <button class="filter-chip active" data-filter="all">All Rooms</button>
-                <button class="filter-chip" data-filter="Safe">Safe</button>
-                <button class="filter-chip" data-filter="Expiring">Expiring</button>
-                <button class="filter-chip" data-filter="Chase Rent">Chase Rent</button>
-                <button class="filter-chip" data-filter="Pending">Pending</button>
-                <button class="filter-chip" data-filter="Vacant">Vacant</button>
-                <button class="filter-chip" data-filter="Maintenance">Maintenance</button>
-            </div>
-
-            <!-- SEARCH -->
-            <div class="slide-up" style="animation-delay: 0.4s; margin-bottom: 24px; display:flex; justify-content:space-between; align-items:center;">
-                <div id="results-count" style="font-weight:600; color:var(--text-secondary);">Showing 0 rooms</div>
-                <div class="form-group floating" style="margin:0; width:300px;">
-                    <input type="text" id="search-input" class="form-input" style="padding-top:12px; padding-bottom:12px;" placeholder="Search rooms...">
-                </div>
-            </div>
-
-            <!-- ROOM GRID -->
-            <div class="room-grid slide-up" id="dashboard-grid" style="animation-delay: 0.5s;">
-                <!-- Room cards injected by JS -->
-            </div>
-
-            <!-- SIDE PANEL -->
+            <!-- SIDE PANEL (DRAWER FOR ROOM DETAILS) -->
             <div id="room-panel" class="side-panel">
                 <div class="side-panel-header">
                     <h2 class="side-panel-title" id="panel-room-no">Room Details</h2>
                     <button class="close-panel-btn" onclick="document.getElementById('room-panel').classList.remove('open')">&times;</button>
                 </div>
-                <!-- Breathable flex container -->
                 <div id="panel-content" class="panel-content">
                     <!-- Injected by JS -->
                 </div>
@@ -117,7 +220,7 @@
         </main>
     </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/api.js?v=7"></script>
+    <script src="js/dashboard.js?v=7"></script>
 </body>
 </html>

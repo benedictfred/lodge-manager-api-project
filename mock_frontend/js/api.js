@@ -1,4 +1,5 @@
-const API_BASE = 'http://localhost:8000/api/v1';
+const hostname = window.location.hostname || 'localhost';
+const API_BASE = `http://${hostname}:8000/api/v1`;
 
 let isRefreshing = false;
 let refreshSubscribers = [];

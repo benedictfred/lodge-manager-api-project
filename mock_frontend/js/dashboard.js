@@ -2,6 +2,16 @@ let currentDashboardData = null;
 let currentFilter = 'all';
 let currentSearch = '';
 
+const safeSetText = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+};
+
+const safeSetHTML = (id, html) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const lodgeId = localStorage.getItem('active_lodge_id');
     const lodgeName = localStorage.getItem('active_lodge_name');
@@ -11,60 +21,104 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    document.getElementById('lodge-name-display').textContent = lodgeName || `Lodge #${lodgeId}`;
+    safeSetText('lodge-name-display', lodgeName || `Lodge #${lodgeId}`);
     
     document.querySelectorAll('.filter-chip').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            currentFilter = e.target.getAttribute('data-filter');
-            renderDashboardGrid();
+            document.querySelectorAll('.filter-chip').forEach(b => {
+                b.classList.remove('bg-white', 'text-slate-800', 'shadow-sm', 'border', 'border-slate-200', 'active');
+                b.classList.add('text-slate-500', 'hover:text-slate-800', 'hover:bg-white/80');
+            });
+            const target = e.currentTarget;
+            target.classList.remove('text-slate-500', 'hover:text-slate-800', 'hover:bg-white/80');
+            target.classList.add('bg-white', 'text-slate-800', 'shadow-sm', 'border', 'border-slate-200', 'active');
+            
+            currentFilter = target.getAttribute('data-filter');
+            
+            const params = new URLSearchParams();
+            if (currentFilter === 'Chase Rent') {
+                params.append('financial_filters', 'Overdue');
+                params.append('financial_filters', 'Owing');
+            } else if (currentFilter === 'Overdue') {
+                params.append('financial_filters', 'Overdue');
+            } else if (currentFilter === 'Safe') {
+                params.append('financial_filters', 'Safe');
+            } else if (currentFilter === 'Expiring') {
+                params.append('financial_filters', 'Expiring');
+            } else if (currentFilter === 'Pending') {
+                params.append('financial_filters', 'Pending');
+            } else if (currentFilter === 'Vacant') {
+                params.append('room_statuses', 'Vacant');
+            } else if (currentFilter === 'Maintenance') {
+                params.append('room_statuses', 'Maintenance');
+            }
+            const queryString = params.toString() ? `?${params.toString()}` : '';
+            fetchDashboard(lodgeId, queryString);
         });
     });
 
-    document.getElementById('search-input').addEventListener('input', (e) => {
-        currentSearch = e.target.value.toLowerCase();
-        renderDashboardGrid();
-    });
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value.toLowerCase();
+            renderDashboardGrid();
+        });
+    }
 
     fetchDashboard(lodgeId);
 });
 
-async function fetchDashboard(lodgeId) {
+async function fetchDashboard(lodgeId, queryString = '') {
     try {
-        const data = await apiFetch(`/dashboard-landlord/me/landlord/${lodgeId}`);
+        const data = await apiFetch(`/dashboard-landlord/me/landlord/${lodgeId}${queryString}`);
         currentDashboardData = data;
         
-        // Render financials
+        // Currency Formatter: Values in Naira
         const cF = (val) => {
-            if (val === undefined || val === null) return 'N/A';
+            if (val === undefined || val === null) return '₦0.00';
             return `₦${val.toLocaleString('en-NG')}.00`;
         };
         
-        document.getElementById('fin-potential').textContent = cF(data.financials.potential_revenue);
-        document.getElementById('fin-expected').textContent = cF(data.financials.expected_revenue);
-        document.getElementById('fin-collected').textContent = cF(data.financials.collected_revenue);
-        document.getElementById('fin-unpaid').textContent = cF(data.financials.unpaid_rent);
+        // Safe DOM bindings for Financials
+        if (data && data.financials) {
+            safeSetText('fin-potential', cF(data.financials.potential_revenue));
+            safeSetText('fin-forecasted', cF(data.financials.forecasted_revenue));
+            safeSetText('fin-expected', cF(data.financials.expected_revenue));
+            safeSetText('fin-collected', cF(data.financials.collected_revenue));
+            safeSetText('fin-unpaid', cF(data.financials.unpaid_rent));
+        }
         
-        document.getElementById('fact-rooms').textContent = data.entity_counts.total_rooms;
-        document.getElementById('fact-tenants').textContent = data.entity_counts.total_tenants;
-        
-        const occRate = data.entity_counts.occupancy_rate;
-        document.getElementById('occ-text').textContent = occRate + '%';
-        
-        const offset = Math.max(0, 283 - (283 * (occRate / 100)));
-        document.getElementById('occ-ring').style.strokeDashoffset = offset;
+        // Safe DOM bindings for Entity Counts
+        if (data && data.entity_counts) {
+            safeSetText('fact-rooms', data.entity_counts.total_rooms ?? 0);
+            safeSetText('fact-tenants', data.entity_counts.total_tenants ?? 0);
+
+            const occRate = data.entity_counts.occupancy_rate ?? 0;
+            safeSetText('occ-text', occRate + '%');
+            
+            const ring = document.getElementById('occ-ring');
+            if (ring) {
+                const circumference = 175.9;
+                const offset = Math.max(0, circumference - (circumference * (occRate / 100)));
+                ring.style.strokeDashoffset = offset;
+            }
+        }
+
+        const pendingMoveouts = (data?.occupied_rooms_lease?.pending || []).length;
+        safeSetText('fact-pending-moveouts', pendingMoveouts);
         
         renderDashboardGrid();
         
     } catch (err) {
-        showToast(err.message);
+        showToast(err.message || 'Failed to load dashboard data');
+        safeSetHTML('dashboard-grid', `<div class="col-span-full text-center py-12 text-slate-500 font-semibold bg-white rounded-xl border border-slate-200">${err.message || 'Error loading dashboard data'}</div>`);
     }
 }
 
 function renderDashboardGrid() {
     if (!currentDashboardData) return;
     const grid = document.getElementById('dashboard-grid');
+    if (!grid) return;
     grid.innerHTML = '';
     
     let roomsToRender = [];
@@ -74,33 +128,23 @@ function renderDashboardGrid() {
     const expiringRooms = d.occupied_rooms_lease?.expiring || [];
     const overdueRooms = d.occupied_rooms_lease?.overdue || [];
     const owingRooms = d.occupied_rooms_lease?.owing || [];
-    const pendingRooms = d.occupied_rooms_lease?.pending || []; // Pending Termination
-    
-    // Add Vacant and Maintenance to uniform array shape
-    const cF = (val) => {
-        if (val === undefined || val === null) return 'N/A';
-        // User explicitly said: money is not in kobo yet, just add .00
-        return `₦${val.toLocaleString('en-NG')}.00`;
-    };
+    const pendingRooms = d.occupied_rooms_lease?.pending || [];
+    const vRooms = d.vacant_rooms || [];
+    const mRooms = d.maintenance_rooms || [];
 
     const toTitleCase = (str) => {
         if (!str) return '';
         return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
     };
 
-    // Vacant and Maintenance already come as RoomGridSummary. Do not overwrite with undefined properties!
-    const vRooms = d.vacant_rooms || [];
-    const mRooms = d.maintenance_rooms || [];
+    const getInitials = (name) => {
+        if (!name || name === 'N/A' || name === 'Ready to Lease' || name === 'Under Repair' || name === 'Unavailable') return 'RM';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return parts[0].substring(0, 2).toUpperCase();
+    };
 
-    if (currentFilter === 'all') {
-        roomsToRender = [...safeRooms, ...expiringRooms, ...overdueRooms, ...owingRooms, ...pendingRooms, ...vRooms, ...mRooms];
-    } else if (currentFilter === 'Chase Rent') {
-        roomsToRender = [...overdueRooms, ...owingRooms];
-    } else if (currentFilter === 'Safe') { roomsToRender = safeRooms; }
-    else if (currentFilter === 'Expiring') { roomsToRender = expiringRooms; }
-    else if (currentFilter === 'Pending') { roomsToRender = pendingRooms; }
-    else if (currentFilter === 'Vacant') { roomsToRender = vRooms; }
-    else if (currentFilter === 'Maintenance') { roomsToRender = mRooms; }
+    roomsToRender = [...safeRooms, ...expiringRooms, ...overdueRooms, ...owingRooms, ...pendingRooms, ...vRooms, ...mRooms];
 
     if (currentSearch) {
         roomsToRender = roomsToRender.filter(r => 
@@ -111,52 +155,134 @@ function renderDashboardGrid() {
     
     roomsToRender.sort((a, b) => String(a.room_no || '').localeCompare(String(b.room_no || ''), undefined, {numeric: true, sensitivity: 'base'}));
 
-    document.getElementById('results-count').innerHTML = `Showing <span>${roomsToRender.length}</span> rooms`;
-    roomsToRender.forEach(r => {
-        const card = document.createElement('div');
-        card.className = `room-card`;
-        
-        const vMap = {
-            'Success': 'var(--safe)', 'Warning': 'var(--expiring)', 'Danger': 'var(--owing)',
-            'Orange': 'var(--overdue)', 'Purple': 'var(--pending)', 'Info': 'var(--vacant)', 'Inactive': 'var(--maintenance)'
-        };
-        const badgeColor = vMap[r.badge_variant] || 'var(--accent-base)';
-        
-        let alertHTML = '';
-        if (String(r.badge_text).toLowerCase() === 'pending') {
-            alertHTML = `<div style="background:var(--owing-bg); color:var(--owing); padding:8px 12px; border-radius:8px; font-size:12px; font-weight:600; margin-bottom:12px; border:1px solid var(--owing-border);">Termination Requested</div>`;
-        }
+    safeSetHTML('results-count', `Showing <span class="font-bold">${roomsToRender.length}</span> rooms`);
 
-        const tenantName = toTitleCase(r.main_display_text || 'N/A');
+    if (roomsToRender.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 font-semibold bg-white rounded-xl border border-slate-200">No rooms match the selected filter.</div>`;
+        return;
+    }
+
+    roomsToRender.forEach(r => {
+        if (!r) return;
+        const card = document.createElement('div');
         
-        // Progress bar logic.
+        // Case-insensitive Variant Map
+        const vKey = String(r.badge_variant || '').toLowerCase();
+        
+        const variantStyles = {
+            'orange': {
+                borderTop: 'border-t-red-500',
+                badgeText: 'text-red-700 bg-red-50 border-red-200',
+                dotBg: 'bg-red-500',
+                avatarBg: 'bg-red-100/80 text-red-700',
+                barBg: 'bg-gradient-to-r from-red-500 to-rose-600',
+                subTextColor: 'text-red-600'
+            },
+            'danger': {
+                borderTop: 'border-t-pink-500',
+                badgeText: 'text-pink-700 bg-pink-50 border-pink-200',
+                dotBg: 'bg-pink-500',
+                avatarBg: 'bg-pink-100/80 text-pink-700',
+                barBg: 'bg-gradient-to-r from-pink-500 to-rose-500',
+                subTextColor: 'text-pink-600'
+            },
+            'success': {
+                borderTop: 'border-t-emerald-500',
+                badgeText: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+                dotBg: 'bg-emerald-500',
+                avatarBg: 'bg-emerald-100/80 text-emerald-700',
+                barBg: 'bg-gradient-to-r from-emerald-400 to-emerald-600',
+                subTextColor: 'text-emerald-700'
+            },
+            'warning': {
+                borderTop: 'border-t-amber-500',
+                badgeText: 'text-amber-700 bg-amber-50 border-amber-200',
+                dotBg: 'bg-amber-500',
+                avatarBg: 'bg-amber-100/80 text-amber-700',
+                barBg: 'bg-gradient-to-r from-amber-400 to-amber-500',
+                subTextColor: 'text-amber-700'
+            },
+            'purple': {
+                borderTop: 'border-t-purple-500',
+                badgeText: 'text-purple-700 bg-purple-50 border-purple-200',
+                dotBg: 'bg-purple-500',
+                avatarBg: 'bg-purple-100/80 text-purple-700',
+                barBg: 'bg-gradient-to-r from-purple-500 to-indigo-600',
+                subTextColor: 'text-purple-700'
+            },
+            'info': {
+                borderTop: 'border-t-blue-500',
+                badgeText: 'text-blue-700 bg-blue-50 border-blue-200',
+                dotBg: 'bg-blue-500',
+                avatarBg: 'bg-blue-100/80 text-blue-700',
+                barBg: 'bg-blue-400',
+                subTextColor: 'text-blue-600'
+            },
+            'inactive': {
+                borderTop: 'border-t-slate-400',
+                badgeText: 'text-slate-600 bg-slate-100 border-slate-200',
+                dotBg: 'bg-slate-400',
+                avatarBg: 'bg-slate-100 text-slate-500',
+                barBg: 'bg-slate-300',
+                subTextColor: 'text-slate-500'
+            }
+        };
+
+        const styleConfig = variantStyles[vKey] || {
+            borderTop: 'border-t-primary',
+            badgeText: 'text-primary bg-blue-50 border-blue-200',
+            dotBg: 'bg-primary',
+            avatarBg: 'bg-blue-100 text-primary',
+            barBg: 'bg-primary',
+            subTextColor: 'text-slate-500'
+        };
+
+        card.className = `bg-white rounded-xl border border-slate-200 shadow-sm p-7 flex flex-col justify-between relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg hover:shadow-slate-200/50 cursor-pointer group`;
+        
+        const tenantName = toTitleCase(r.main_display_text || 'N/A');
+        const tenantInitials = getInitials(r.main_display_text);
+        
         let progressPercent = 100;
-        const match = (r.sub_display_text || '').match(/(\d+)/);
+        let daysLeftVal = null;
+        const match = (r.sub_display_text || '').match(/(-?\d+)/);
         if (match) {
-            const daysLeft = parseInt(match[1]);
-            progressPercent = Math.min(100, Math.max(0, (daysLeft / 365) * 100)); // Rough estimate
+            daysLeftVal = parseInt(match[1]);
+            progressPercent = Math.min(100, Math.max(0, (daysLeftVal / 365) * 100));
         }
 
         const isVacantOrMaintenance = !r.lease_id;
 
+        let bottomStatusText = '';
+        if (daysLeftVal !== null && daysLeftVal < 0) {
+            bottomStatusText = `${Math.abs(daysLeftVal)} days overdue`;
+            progressPercent = 0;
+        } else {
+            bottomStatusText = r.sub_display_text || 'Available';
+        }
+
         card.innerHTML = `
-            ${alertHTML}
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-                <h3 style="font-size:24px; font-family:'Outfit',sans-serif; margin:0;">Room ${r.room_no || '??'}</h3>
-                <span style="background:${badgeColor}; color:#fff; padding:4px 12px; border-radius:20px; font-size:11px; text-transform:uppercase; font-weight:700; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 0 0 3px ${badgeColor}30, 0 4px 10px ${badgeColor}40;">
-                    <span style="width:6px; height:6px; border-radius:50%; background:#fff;"></span>
-                    ${r.badge_text || 'N/A'}
-                </span>
+            <div>
+                <div class="flex justify-between items-center mb-5">
+                    <h3 class="text-lg font-bold text-slate-800 tracking-tight group-hover:text-primary transition-colors">Room ${r.room_no || '??'}</h3>
+                    <span class="inline-flex items-center gap-1.5 text-[11px] font-bold ${styleConfig.badgeText} uppercase px-2.5 py-0.5 rounded-full border tracking-wider shadow-sm">
+                        <span class="w-1.5 h-1.5 rounded-full ${styleConfig.dotBg}"></span>
+                        ${r.badge_text || 'N/A'}
+                    </span>
+                </div>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold uppercase border border-slate-200/60 flex-shrink-0">
+                        ${tenantInitials}
+                    </div>
+                    <p class="text-sm font-semibold text-slate-700 capitalize truncate">${tenantName}</p>
+                </div>
             </div>
             
-            <div style="font-weight:600; font-size:16px; margin-bottom:16px; color:var(--text-primary);">${tenantName}</div>
-            
-            <div style="margin-bottom:8px;">
-                <div style="background:var(--surface-hover); height:8px; border-radius:4px; overflow:hidden; border:1px solid var(--border-glass); margin-bottom:6px;">
-                    <div style="width:${isVacantOrMaintenance ? 0 : progressPercent}%; background:${isVacantOrMaintenance ? 'var(--border-glass)' : badgeColor}; height:100%; border-radius:4px; transition:width 0.5s ease;"></div>
+            <div class="mt-auto">
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-3 border border-slate-200/40">
+                    <div class="${isVacantOrMaintenance ? 'bg-slate-200' : styleConfig.barBg} h-full rounded-full transition-all duration-700 ease-out" style="width: ${isVacantOrMaintenance ? 0 : progressPercent}%"></div>
                 </div>
-                <div style="color:${isVacantOrMaintenance ? 'var(--text-tertiary)' : 'var(--text-secondary)'}; font-size:12px; font-weight:600; text-align:right;">
-                    ${r.sub_display_text || 'N/A'}
+                <div class="flex items-center justify-end text-xs">
+                    <span class="font-bold tracking-wide text-slate-500">${bottomStatusText}</span>
                 </div>
             </div>
         `;
@@ -167,174 +293,68 @@ function renderDashboardGrid() {
 }
 
 async function openRoomSidePanel(roomData) {
-    document.getElementById('room-panel').classList.add('open');
+    const panel = document.getElementById('room-panel');
+    if (panel) panel.classList.add('open');
     
-    const contentDiv = document.getElementById('panel-content');
-    contentDiv.innerHTML = `<div style="text-align:center; padding: 40px; color:var(--text-tertiary);">Loading details...</div>`;
+    safeSetText('panel-room-no', `Room ${roomData?.room_no || '??'}`);
+    
+    const content = document.getElementById('panel-content');
+    if (!content) return;
+    
+    content.innerHTML = '<div style="padding:24px; text-align:center; color:var(--text-secondary);">Loading details...</div>';
     
     try {
-        let actionButtons = '';
-        const vMap = {
-            'Success': 'var(--safe)', 'Warning': 'var(--expiring)', 'Danger': 'var(--owing)',
-            'Orange': 'var(--overdue)', 'Purple': 'var(--pending)', 'Info': 'var(--vacant)', 'Inactive': 'var(--maintenance)'
-        };
-        const badgeColor = vMap[roomData.badge_variant] || 'var(--accent-base)';
+        if (!roomData || !roomData.lease_id) {
+            content.innerHTML = `
+                <div class="space-y-4 p-4">
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Room Status</div>
+                        <div class="text-lg font-bold text-slate-800">${roomData?.badge_text || 'Vacant'}</div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Description</div>
+                        <div class="text-sm text-slate-700">${roomData?.main_display_text || 'No description provided.'}</div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
 
-        // Move badge to header next to room number
-        document.getElementById('panel-room-no').innerHTML = `
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span>Room ${roomData.room_no}</span>
-                <span style="background:${badgeColor}; color:#fff; padding:4px 12px; border-radius:20px; font-size:11px; text-transform:uppercase; font-weight:700; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 0 0 3px ${badgeColor}30, 0 4px 10px ${badgeColor}40; letter-spacing:0.5px;">
-                    <span style="width:6px; height:6px; border-radius:50%; background:#fff;"></span>
-                    ${roomData.badge_text}
-                </span>
+        const lease = await apiFetch(`/leases/${roomData.lease_id}`);
+        const cF = (val) => `₦${(val || 0).toLocaleString('en-NG')}.00`;
+        
+        content.innerHTML = `
+            <div class="space-y-6 p-2">
+                <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-2">
+                    <div class="text-xs font-bold text-primary uppercase tracking-wider">Tenant Profile</div>
+                    <div class="text-xl font-bold text-slate-800">${lease.tenant ? (lease.tenant.first_name + ' ' + lease.tenant.last_name) : roomData.main_display_text}</div>
+                    <div class="text-sm text-slate-500">${lease.tenant?.email || 'N/A'}</div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Rent Amount</div>
+                        <div class="text-base font-bold text-slate-800">${cF(lease.rent_amount)}</div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Lease Status</div>
+                        <div class="text-base font-bold text-emerald-600 capitalize">${lease.status}</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-500 font-medium">Start Date:</span>
+                        <span class="font-semibold text-slate-800">${lease.start_date}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-500 font-medium">End Date:</span>
+                        <span class="font-semibold text-slate-800">${lease.end_date}</span>
+                    </div>
+                </div>
             </div>
         `;
-
-        if (roomData.lease_id) {
-            // Room is occupied
-            const leaseInfo = await apiFetch(`/dashboard-landlord/lease-info/${roomData.lease_id}`);
-            
-            if (String(roomData.badge_text).toLowerCase() === 'pending') {
-                actionButtons = `
-                    <div style="background:var(--owing-bg); padding:16px; border-radius:12px; border:1px solid var(--owing-border); margin-bottom:16px;">
-                        <p style="font-weight:600; color:var(--owing); margin-bottom:8px;">Tenant Requested Termination</p>
-                        <button class="btn btn-primary" style="width:100%; background:var(--owing); box-shadow:0 4px 12px rgba(225,29,72,0.3);" onclick="approveTermination(${roomData.lease_id})">Approve Termination</button>
-                    </div>
-                `;
-            } else {
-                actionButtons = `
-                    <button class="btn btn-outline" style="width:100%; color:var(--owing); border-color:var(--owing-border);" onclick="approveTermination(${roomData.lease_id})">Force Terminate Lease</button>
-                `;
-            }
-
-            const cF = (val) => {
-                if (val === undefined || val === null) return 'N/A';
-                return `₦${val.toLocaleString('en-NG')}.00`;
-            };
-            
-            const formatDate = (dateStr) => {
-                if(!dateStr) return 'N/A';
-                const date = new Date(dateStr);
-                const d = date.getDate();
-                const suffix = ["th", "st", "nd", "rd"][d % 10 > 3 ? 0 : (d % 100 - d % 10 != 10) * d % 10];
-                return `${d}${suffix} ${date.toLocaleString('en-US', { month: 'short', year: 'numeric' })}`;
-            };
-            
-            // Progress bar calculation
-            let progressPercent = 100;
-            const match = (roomData.sub_display_text || '').match(/(\d+)/);
-            if (match) {
-                const daysLeft = parseInt(match[1]);
-                progressPercent = Math.min(100, Math.max(0, (daysLeft / 365) * 100));
-            }
-
-            contentDiv.innerHTML = `
-                <div class="glass-panel" style="margin-bottom:24px;">
-                    <p style="font-size:20px; font-weight:700; font-family:'Outfit',sans-serif; margin-bottom:16px;">${roomData.main_display_text}</p>
-                    
-                    <div style="margin-bottom:24px;">
-                        <div style="background:var(--surface-hover); height:8px; border-radius:4px; overflow:hidden; border:1px solid var(--border-glass); margin-bottom:6px;">
-                            <div style="width:${progressPercent}%; background:${badgeColor}; height:100%; border-radius:4px; transition:width 0.5s ease;"></div>
-                        </div>
-                        <div style="color:var(--text-secondary); font-size:12px; font-weight:600; text-align:right;">
-                            ${roomData.sub_display_text}
-                        </div>
-                    </div>
-                    
-                    <div style="padding-top:16px; border-top:1px solid var(--border-color); font-size:14px;">
-                        <p style="font-weight:700; color:var(--text-primary); margin-bottom:12px; font-family:'Outfit',sans-serif; font-size:16px;">Lease Terms</p>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
-                            <div>
-                                <div style="color:var(--text-tertiary); font-size:11px; text-transform:uppercase; font-weight:700; margin-bottom:4px;">Start Date</div>
-                                <div style="font-weight:600;">${formatDate(leaseInfo.lease.start_date)}</div>
-                            </div>
-                            <div>
-                                <div style="color:var(--text-tertiary); font-size:11px; text-transform:uppercase; font-weight:700; margin-bottom:4px;">End Date</div>
-                                <div style="font-weight:600;">${formatDate(leaseInfo.lease.end_date)}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="padding-top:16px; border-top:1px solid var(--border-color); font-size:14px;">
-                        <p style="font-weight:700; color:var(--text-primary); margin-bottom:12px; font-family:'Outfit',sans-serif; font-size:16px;">Financials</p>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                            <span style="color:var(--text-secondary);">Agreed Rent:</span>
-                            <span style="font-weight:600;">${cF(leaseInfo.finance.agreed_rent)}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                            <span style="color:var(--text-secondary);">Total Paid:</span>
-                            <span style="font-weight:600; color:var(--safe);">${cF(leaseInfo.finance.total_paid)}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:1px dashed var(--border-color);">
-                            <span style="color:var(--text-secondary); font-weight:600;">Remaining Balance:</span>
-                            <span style="font-weight:700; color:var(--owing);">${cF(leaseInfo.finance.remaining_balance)}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                ${actionButtons}
-            `;
-        } else {
-            // Room is vacant or maintenance
-            const roomDetails = await apiFetch(`/rooms/${roomData.room_id}`);
-            
-            if (String(roomData.badge_text).toLowerCase() === 'vacant') {
-                actionButtons = `
-                    <button class="btn btn-primary" style="width:100%; border-radius:12px; margin-bottom:12px; height:48px; font-size:16px;" onclick="window.location.href='leases.html'">Assign Lease</button>
-                    <button class="btn btn-outline" style="width:100%; border-radius:12px; height:44px;" onclick="toggleRoomMaintenance(${roomDetails.id}, 'Maintenance')">Set to Maintenance</button>
-                `;
-            } else if (String(roomData.badge_text).toLowerCase() === 'maintenance') {
-                actionButtons = `
-                    <button class="btn btn-outline" style="width:100%; border-radius:12px; height:48px;" onclick="toggleRoomMaintenance(${roomDetails.id}, 'Vacant')">Set to Vacant</button>
-                `;
-            }
-
-            contentDiv.innerHTML = `
-                <div class="glass-panel" style="margin-bottom:24px; text-align:center; padding:32px 16px;">
-                    <div style="font-size:48px; margin-bottom:16px;">🏠</div>
-                    <p style="font-size:20px; font-weight:700; font-family:'Outfit',sans-serif; margin-bottom:8px;">${roomDetails.room_no}</p>
-                    <p style="font-size:14px; color:var(--text-secondary);">This room is currently ${String(roomData.badge_text).toLowerCase()}. It is not assigned to any tenant.</p>
-                </div>
-                
-                ${actionButtons}
-            `;
-        }
-        
     } catch (err) {
-        contentDiv.innerHTML = `
-            <div style="color:var(--owing); text-align:center; padding:24px; background:var(--owing-bg); border-radius:12px; border:1px solid var(--owing-border);">Secure connection failed: ${err.message}</div>
-        `;
-    }
-}
-
-async function toggleRoomMaintenance(roomId, newStatus) {
-    if(!roomId) { showToast("Room ID is missing."); return; }
-    try {
-        await apiFetch(`/rooms/${roomId}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: newStatus })
-        });
-        showToast(`Room is now ${newStatus}`, 'success');
-        document.getElementById('room-panel').classList.remove('open');
-        fetchDashboard(localStorage.getItem('active_lodge_id'));
-    } catch (err) {
-        showToast(err.message);
-    }
-}
-
-async function approveTermination(leaseId) {
-    if(!leaseId) { showToast("Lease ID missing."); return; }
-    if(!confirm("Are you sure you want to terminate this lease? This action is irreversible.")) return;
-    
-    try {
-        await apiFetch(`/leases/terminate/${leaseId}`, {
-            method: 'PATCH'
-        });
-        showToast(`Lease terminated successfully`, 'success');
-        document.getElementById('room-panel').classList.remove('open');
-        fetchDashboard(localStorage.getItem('active_lodge_id'));
-    } catch (err) {
-        showToast(err.message);
+        content.innerHTML = `<div class="p-4 text-red-500 font-semibold">${err.message}</div>`;
     }
 }

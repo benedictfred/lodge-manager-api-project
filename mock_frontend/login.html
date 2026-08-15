@@ -79,8 +79,10 @@
                     if (lodges && lodges.length > 0) {
                         localStorage.setItem('active_lodge_id', lodges[0].id);
                         localStorage.setItem('active_lodge_name', lodges[0].name);
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        window.location.href = 'lodges.html';
                     }
-                    window.location.href = 'dashboard.html';
                 } else if (user.role === 'Tenant') {
                     window.location.href = 'tenant-dashboard.html';
                 } else {
