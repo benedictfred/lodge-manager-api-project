@@ -804,7 +804,7 @@ def add_dashboard_stats(test_db, add_lodge_to_db, add_landlord_to_db, room_schem
         
         start_date = date.today() - timedelta(days=100)
         end_date = date.today() + timedelta(days=100)
-        status = LeaseStatus.ACTIVE
+        status= LeaseStatus.ACTIVE
         total_paid = 5000
         
         if scenario == "SAFE":

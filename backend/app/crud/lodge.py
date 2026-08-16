@@ -90,14 +90,24 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
         """
         occupied_count_expr = func.count(case((const.occupied_expr, 1), else_=None))
 
-        vacant_count_expr = func.count(case((const.vacant_expr, 1), else_=None))
+        vacant_count_expr = func.count(case((and_(*const.vacant_expr), 1), else_=None))
 
-        maintenance_count_expr = func.count(case((const.maintenance_expr, 1), else_=None))
+        maintenance_count_expr = func.count(case((and_(*const.maintenance_expr), 1), else_=None))
 
         stmt = select(
             occupied_count_expr.label('occupied'),
             vacant_count_expr.label('vacant'),
             maintenance_count_expr.label('maintenance')
+        ).select_from(
+            Room
+        ).outerjoin(
+            Lease,
+            and_(
+                Lease.room_id == Room.id,
+            or_(
+                Lease.status.is_(None),
+                Lease.status.is_(LeaseStatus.PENDING_TERMINATION))
+                 )
         ).where(
             Room.lodge_id == lodge_id
         )
@@ -183,7 +193,7 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
                 Lease.status.is_(None),
                 Lease.status == LeaseStatus.PENDING_TERMINATION
             ),
-            Room.status == RoomStatus.OCCUPIED
+            Room.status.is_(None)
         )
 
         result = db.execute(stmt).mappings().first()
@@ -201,7 +211,6 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             Room.room_no.label('room_no'),
             Room.description.label('description'),
             Room.base_rent_price.label('base_rent'),
-            Room.status.label('status'),
             Lease.start_date.label('start_date'),
             Lease.end_date.label('end_date'),
             Lease.agreed_rent_amt.label('agreed_rent'),
@@ -217,8 +226,6 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
                 (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeTexts.EXPIRING.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeTexts.OVERDUE.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeTexts.OWING.value),
-                (const.vacant_expr, RoomStatus.VACANT.value),
-                (const.maintenance_expr, RoomStatus.MAINTENANCE.value),
                 else_=BadgeTexts.UNKNOWN_BADGE_TEXT.value
             ).label('badge_text'),
 
@@ -228,8 +235,6 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
                 (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeVariants.WARNING.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeVariants.ORANGE.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeVariants.DANGER.value),
-                (const.vacant_expr, BadgeVariants.INFO.value),
-                (const.maintenance_expr, BadgeVariants.INACTIVE.value),
                 else_=BadgeVariants.UNKNOWN_VARIANT.value
             ).label('badge_variant'),
         ).select_from(
@@ -255,7 +260,6 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             Lease.id,
             Room.room_no,
             Room.description,
-            Room.status,
             Room.base_rent_price,
             Lease.start_date,
             Lease.end_date,
@@ -281,7 +285,6 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             Room.room_no.label('room_no'),
             Room.description.label('description'),
             Room.base_rent_price.label('base_rent'),
-            Room.status.label('status'),
             Lease.start_date.label('start_date'),
             Lease.end_date.label('end_date'),
             Lease.agreed_rent_amt.label('agreed_rent'),
@@ -294,8 +297,6 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
                 (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeTexts.EXPIRING.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeTexts.OVERDUE.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeTexts.OWING.value),
-                (const.vacant_expr, RoomStatus.VACANT.value),
-                (const.maintenance_expr, RoomStatus.MAINTENANCE.value),
                 else_=BadgeTexts.UNKNOWN_BADGE_TEXT.value
             ).label('badge_text'),
 
@@ -305,8 +306,6 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
                 (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeVariants.WARNING.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeVariants.ORANGE.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeVariants.DANGER.value),
-                (const.vacant_expr, BadgeVariants.INFO.value),
-                (const.maintenance_expr, BadgeVariants.INACTIVE.value),
                 else_=BadgeVariants.UNKNOWN_VARIANT.value
             ).label('badge_variant'),
 

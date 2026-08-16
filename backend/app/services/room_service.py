@@ -120,7 +120,7 @@ def update_room_details(db: Session, room_id: int, landlord_id: int, update_data
 
     room = verify_room_existence(db, landlord_id=landlord_id, room_id=room_id)
 
-    if room.status == RoomStatus.OCCUPIED:
+    if room.computed_status == RoomStatus.OCCUPIED:
         raise RoomIsOccupiedError(occupied_room_no=room.room_no)
 
     if update_data.status and update_data.status not in constants.UPDATABLE_ROOM_STATUSES:
@@ -154,7 +154,7 @@ def bulk_update_base_rent(
         raise RoomNotFoundError(detail='One or more rooms')
 
     for room in to_update_rooms:
-        if room.status  == RoomStatus.OCCUPIED:
+        if room.computed_status  == RoomStatus.OCCUPIED:
             raise RoomIsOccupiedError(occupied_room_no=room.room_no)
 
         room.base_rent_price = update_data.base_rent

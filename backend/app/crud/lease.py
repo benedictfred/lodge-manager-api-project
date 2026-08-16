@@ -85,7 +85,6 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         db_lease.payments.append(db_payment)
 
         db.add(db_lease)
-        room.status = RoomStatus.OCCUPIED
         db.commit()
         db.refresh(db_lease)
 
@@ -121,7 +120,6 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
             Lease: The terminated lease.
         """
         db_lease.status = LeaseStatus.TERMINATED
-        db_lease.room.status = RoomStatus.VACANT
         db_lease.end_date = datetime.now()
 
         db.commit()

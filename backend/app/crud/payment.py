@@ -14,7 +14,7 @@ from app.models.room import Room
 from app.schemas.dashboard import DashboardFilters
 from app.schemas.payment import PaymentCreate, PaymentResponse
 from app.crud.base_crud import CRUDBase
-from sqlalchemy import func, select, or_
+from sqlalchemy import func, select, or_, and_
 
 from utilities.dashboard_utilities import apply_dashboard_filters
 
@@ -34,7 +34,6 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
         Get the aggregated payment amount for a lease.
 
         Args:
-            landlord_id: The ID of the authenticated landlord
             db (Session): The database session.
             lease_id (int): The ID of the lease.
 
@@ -99,7 +98,7 @@ class CRUDPayment(CRUDBase[Payment, PaymentCreate, PaymentResponse]):
             PAYMENT_SUBQ, PAYMENT_SUBQ.c.lease_id == Lease.id
         ).where(
             Room.lodge_id == lodge_id,
-            or_(constants.vacant_expr, constants.maintenance_expr)
+            or_(and_(*constants.vacant_expr), and_(*constants.maintenance_expr))
         )
 
         stmt = apply_dashboard_filters(filter_by=filter_by,filters=constants.filter_menu, stmt=stmt)

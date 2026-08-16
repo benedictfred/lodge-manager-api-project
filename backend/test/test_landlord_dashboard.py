@@ -14,7 +14,7 @@ def test_landlord_dashboard_stats_paginated_returns_200(authenticated_landlord_c
 
     response = authenticated_landlord_client.get(url=f'{landlord_dashboard_url}/me/landlord/{lodge_id}')
     data = response.json()
-    data_dict = json.dumps(data, indent=4)
+    print(data)
 
     assert response.status_code == status.HTTP_200_OK
     assert 'financials' in data
@@ -142,13 +142,14 @@ def test_landlord_dashboard_filter_room_status_returns_200(authenticated_landlor
         params={'room_statuses': [room_status_filter]}
     )
     data = response.json()
-    data_dict = json.dumps(data, indent=4)
 
     base_rent = 5000
     room_filters_dict = {
         'vacant_rooms': ('maintenance_rooms', 0),
         'maintenance_rooms': ('vacant_rooms', 0)
     }
+    print(data)
+
     assert response.status_code == status.HTTP_200_OK
     assert len(data[room_key]) == expected_value
 

@@ -39,7 +39,8 @@ class RoomCreate(RoomBase):
 
 class RoomResponse(RoomCreate):
     id: int = Field(..., description="The unique identifier for the room.", examples=[1])
-    status: RoomStatus = Field(..., description="The current status of the room.", examples=["vacant"])
+    status: RoomStatus = Field(..., description="The current status of the room.",
+                               examples=["vacant"], validation_alias='computed_status')
     created_at: datetime = Field(..., description="Timestamp when the room was created.", examples=["2026-07-04T06:05:02Z"])
 
     model_config = ConfigDict(from_attributes=True)
@@ -57,7 +58,8 @@ class RoomUpdate(BaseModel):
     room_no: Optional[str] = Field(None, description="The room number or identifier.", examples=["A1", "101"])
     description: Optional[str] = Field(None, description="The description of the room.", examples=["Spacious self-contain"])
     base_rent_price: Optional[int] = Field(None, ge=0, description="The base rental price in KOBO.", examples=[20000000])
-    status: Optional[RoomStatus] = Field(None, description="The current status of the room.", examples=["maintenance"])
+    status: Optional[RoomStatus] = Field(None, description="The current status of the room.",
+                                         examples=["Maintenance"])
 
 
 class RoomGridSummary(BaseModel):

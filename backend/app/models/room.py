@@ -6,7 +6,7 @@ within a lodge that can be leased to a tenant. It also includes data
 classes for filtering rooms.
 """
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime,date
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy import func
@@ -45,13 +45,13 @@ class Room(Base):
     room_no: Mapped[str] = mapped_column(index=True, nullable=False)
     description: Mapped[str] = mapped_column(String(300))
     base_rent_price: Mapped[int] = mapped_column(nullable=False, default=200000)
-    status: Mapped["RoomStatus"] = mapped_column(Enum(RoomStatus), default=RoomStatus.VACANT, nullable=False)
+    status: Mapped["RoomStatus"] = mapped_column(Enum(RoomStatus), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False
     )
-    leases: Mapped["Lease"] = relationship( back_populates='room')
+    leases: Mapped[list["Lease"]] = relationship( back_populates='room')
     lodge: Mapped["Lodge"] = relationship( back_populates='rooms')
 
     __table_args__ = (
@@ -60,6 +60,19 @@ class Room(Base):
             'lodge_id',
             name='lodge_room_uc'
         ),)
+
+    @property
+    def computed_status(self) -> RoomStatus:
+        if self.status == RoomStatus.MAINTENANCE:
+            return RoomStatus.MAINTENANCE
+
+        has_active_lease = any(
+            lease.status is None and lease.end_date >= date.today()
+            for lease in self.leases
+        )
+
+        return RoomStatus.OCCUPIED if has_active_lease else RoomStatus.VACANT
+
 
 @dataclass
 class RoomFilter:

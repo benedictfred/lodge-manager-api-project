@@ -164,7 +164,7 @@ def get_landlord_dashboard(
 
 
 
-    #Todo: group rooms into occupied(safe, expiring & overdue) , vacant & maintenance
+    #Todo: group rooms into occupied(safe, expiring, overdue, pending and owing) , vacant & maintenance
     rooms = RoomFilter()
 
     occupied_rooms_lease = get_room_dashboard_summary(
@@ -195,7 +195,7 @@ def _organise_room_lease_summary(
     if not raw_summary_row:
         raise LeaseNotFoundError()
 
-    room_summary = RoomSummary(**raw_summary_row)
+    room_summary = RoomSummary(**raw_summary_row, status=RoomStatus.OCCUPIED)
     lease_summary = LeaseSummary(**raw_summary_row)
     financial_summary = FinancialSummary(**raw_summary_row)
     tenant_summary = TenantSummary(**raw_summary_row)
@@ -246,7 +246,7 @@ def get_tenant_active_lease_stats(db: Session, tenant_id: int, lodge_id: int, sk
     tenant_stat_list: list[TenantDashboardStats] = []
 
     for row in row_summary_list:
-        room_summary = RoomSummary(**row)
+        room_summary = RoomSummary(**row, status=RoomStatus.OCCUPIED)
         lease_summary = LeaseSummary(**row)
         financial_summary = FinancialSummary(**row)
 

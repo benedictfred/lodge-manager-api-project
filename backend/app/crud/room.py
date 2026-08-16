@@ -101,8 +101,8 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
                 (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeTexts.EXPIRING.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeTexts.OVERDUE.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeTexts.OWING.value),
-                (const.vacant_expr, RoomStatus.VACANT.value),
-                (const.maintenance_expr, RoomStatus.MAINTENANCE.value),
+                (and_(*const.vacant_expr), RoomStatus.VACANT.value),
+                (and_(*const.maintenance_expr), RoomStatus.MAINTENANCE.value),
                 else_=BadgeTexts.UNKNOWN_BADGE_TEXT.value
             ).label('badge_text'),
 
@@ -112,15 +112,15 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
                 (and_(*const.filter_menu.get(BadgeTexts.EXPIRING)), BadgeVariants.WARNING.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OVERDUE)), BadgeVariants.ORANGE.value),
                 (and_(*const.filter_menu.get(BadgeTexts.OWING)), BadgeVariants.DANGER.value),
-                (const.vacant_expr, BadgeVariants.INFO.value),
-                (const.maintenance_expr, BadgeVariants.INACTIVE.value),
+                (and_(*const.vacant_expr), BadgeVariants.INFO.value),
+                (and_(*const.maintenance_expr), BadgeVariants.INACTIVE.value),
                 else_= BadgeVariants.UNKNOWN_VARIANT.value
             ).label('badge_variant'),
 
             case(
                 (const.occupied_expr, func.concat(User.first_name, ' ', User.last_name, )),
-                (const.vacant_expr, 'Ready to Lease'),
-                (const.maintenance_expr, 'Unavailable'),
+                (and_(*const.vacant_expr), 'Ready to Lease'),
+                (and_(*const.maintenance_expr), 'Unavailable'),
                 else_='Invalid'
             ).label('main_display_text'),
 
@@ -129,8 +129,8 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
                     func.concat(func.abs(const.days_left, ), 'days overdue')
                 ),
                 (const.occupied_expr, func.concat(const.days_left, 'days left')),
-                (const.vacant_expr, 'Available'),
-                (const.maintenance_expr, 'Under Maintenance'),
+                (and_(*const.vacant_expr), 'Available'),
+                (and_(*const.maintenance_expr), 'Under Maintenance'),
                 else_='Invalid'
             ).label('sub_display_text'),
             
@@ -169,7 +169,7 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             Room.room_no,
             Lease.agreed_rent_amt,
             Lease.end_date,
-            Room.status,
+            # Room.status,
 
         ))
 

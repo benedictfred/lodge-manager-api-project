@@ -13,6 +13,7 @@ def test_landlord_create_room_returns_200(authenticated_landlord_client, mock_ro
     """
     response = authenticated_landlord_client.post(url=room_url, json=mock_room_schema.model_dump())
     data = response.json()
+    print(data)
 
     assert response.status_code == status.HTTP_200_OK
     assert data['room_no'] == mock_room_schema.room_no
@@ -189,7 +190,7 @@ def test_landlord_update_room_scenarios_returns_200(authenticated_landlord_clien
         json=update_fields
     )
     data = response.json()
-
+    print(response.json())
     assert response.status_code == status.HTTP_200_OK
     for key, value in update_fields.items():
         if isinstance(value, str):
@@ -273,8 +274,8 @@ def test_bulk_update_with_occupied_room_returns_400(authenticated_landlord_clien
         url=f'{room_url}/{lodge_id}/rooms/bulk',
         json=payload
     )
-
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
 
 
 

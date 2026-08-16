@@ -13,6 +13,9 @@ def apply_dashboard_filters(filters: dict ,  filter_by: DashboardFilters, stmt: 
             sql_expr = filters.get(status)
 
             if sql_expr is not None:
+                if isinstance(sql_expr, tuple):
+                    sql_expr = and_(*sql_expr)
+
                 if status == RoomStatus.OCCUPIED:
                     if not filter_by.financial_filters:
                         all_conditions.append(sql_expr)
