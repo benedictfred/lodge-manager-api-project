@@ -51,7 +51,6 @@ def test_landlord_dashboard_pagination_skip_returns_200(authenticated_landlord_c
 
     response = authenticated_landlord_client.get(url=f'{landlord_dashboard_url}/me/landlord/{lodge_id}?skip=2')
     data = response.json()
-    data_dict = json.dumps(data, indent=4)
 
     assert response.status_code == status.HTTP_200_OK
 
@@ -77,7 +76,6 @@ def test_landlord_dashboard_pagination_limit_returns_200(authenticated_landlord_
 
     response = authenticated_landlord_client.get(url=f'{landlord_dashboard_url}/me/landlord/{lodge_id}?limit=1')
     data = response.json()
-    data_dict = json.dumps(data, indent=4)
     assert response.status_code == status.HTTP_200_OK
 
     total_rooms_in_arrays = (
@@ -101,7 +99,7 @@ def test_landlord_dashboard_pagination_exceed_limit_returns_200(authenticated_la
 
     response = authenticated_landlord_client.get(url=f'{landlord_dashboard_url}/me/landlord/{lodge_id}?limit=1000')
     data = response.json()
-    data_dict = json.dumps(data, indent=4)
+
     assert response.status_code == status.HTTP_200_OK
 
     total_rooms_in_arrays = (

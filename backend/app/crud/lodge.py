@@ -5,7 +5,7 @@ This module contains the CRUD operations for Lodge models.
 """
 from sqlalchemy import or_, literal, func, select, and_, case
 from sqlalchemy.orm import Session
-from app.core.enums import RoomStatus, LeaseStatus, BadgeTexts, BadgeVariants
+from app.core.enums import RoomStatus, LeaseStatus, BadgeTexts, BadgeVariants, TenantStatus
 from app.models.lease import Lease
 from app.models.lodge import Lodge
 from app.models.room import Room
@@ -128,7 +128,10 @@ class CRUDLodge(CRUDBase[Lodge, LodgeCreate, LodgeUpdate]):
             RowMapping: The total tenant count.
         """
         tenant_count_expr = func.count(TenantProfile.id)
-        stmt = select(tenant_count_expr.label('total_tenants')).where(TenantProfile.lodge_id == lodge_id)
+        stmt = select(tenant_count_expr.label('total_tenants')).where(
+            TenantProfile.lodge_id == lodge_id,
+            TenantProfile.status.is_(TenantStatus.APPROVED)
+        )
 
         result = db.execute(stmt).mappings().first()
         return result

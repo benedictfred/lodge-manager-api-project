@@ -5,7 +5,7 @@ This module contains the CRUD operations for Room models.
 """
 from typing import Sequence
 
-from app.core.enums import BadgeVariants, LeaseStatus, BadgeTexts, RoomStatus
+from app.core.enums import BadgeVariants, LeaseStatus, BadgeTexts, RoomStatus, TenantStatus
 from app.models.lease import Lease
 from app.models.lodge import Lodge
 from app.models.room import Room
@@ -154,7 +154,10 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
             )
 
         ).outerjoin(
-            TenantProfile, Lease.tenant_id == TenantProfile.id
+            TenantProfile, and_(
+                Lease.tenant_id == TenantProfile.id,
+                TenantProfile.status.is_(TenantStatus.APPROVED)
+            )
         ).outerjoin(
             User, TenantProfile.user_id == User.id
         ).outerjoin(
