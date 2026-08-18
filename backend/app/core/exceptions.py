@@ -157,3 +157,12 @@ class InviteNotFoundError(BaseNotFoundError):
         }
 
         super().__init__(name='Invite')
+
+class UnapprovedTenantError(BaseLodgeOpsError):
+    def __init__(self, tenant_id: int):
+        self.msg = f'Tenant is not approved by landlord.'
+        self.meta = {
+            'tenant_id': tenant_id
+        }
+
+        super().__init__(detail=self.msg, status_code=status.HTTP_400_BAD_REQUEST)

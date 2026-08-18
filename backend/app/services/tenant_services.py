@@ -67,13 +67,15 @@ def fetch_lodge_tenants(
         db: Session,
         lodge_id: int,
         landlord_user: User,
-        skip: int,
-        limit: int
+        skip: int ,
+        limit: int,
+        status: TenantStatus|None
 ):
     """
     Fetch all tenants for a specific lodge.
 
     Args:
+        status: The status of the tenants to filter by. Defaults to None
         db (Session): The database session.
         lodge_id (int): The ID of the lodge.
         landlord_user (User): The landlord user requesting the data.
@@ -84,7 +86,7 @@ def fetch_lodge_tenants(
         List[TenantProfile]: A list of tenant profiles.
     """
     lodge_service.verify_lodge_ownership(db, lodge_id=lodge_id, landlord_id=landlord_user.id)
-    tenants = crud_tenant.get_tenants(db, lodge_id=lodge_id, skip=skip, max_limit=limit)
+    tenants = crud_tenant.get_tenants(db, lodge_id=lodge_id, skip=skip, max_limit=limit, status=status)
     return tenants
 
 

@@ -68,14 +68,13 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         return leases
 
 
-    def create_lease(self, db: Session, lease_data: LeaseCreate, room: Room):
+    def create_lease(self, db: Session, lease_data: LeaseCreate):
         """
         Create a new lease and associated initial payment.
 
         Args:
             db (Session): The database session.
             lease_data (LeaseCreate): The lease creation data.
-            room (Room): The room being leased.
 
         Returns:
             Lease: The newly created lease.

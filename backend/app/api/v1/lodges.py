@@ -8,6 +8,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_landlord_user
+from app.core.enums import TenantStatus
 from app.schemas import lodge as lodge_schema
 from app.schemas import tenantprofile as schema_tenant
 from app.schemas.error import ErrorResponseSchema
@@ -137,6 +138,7 @@ def get_lodge_tenants(
         lodge_id: int,
         skip: int = 0,
         limit: int = 50,
+        status: TenantStatus|None = None,
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
@@ -144,6 +146,7 @@ def get_lodge_tenants(
     Retrieve all tenants in a specific lodge owned by the landlord.
 
     Args:
+        status:  The status of the tenants to filter by. Defaults to None
         lodge_id (int): The ID of the lodge.
         skip (int): Number of records to skip.
         limit (int): Maximum number of records to return.
@@ -159,7 +162,8 @@ def get_lodge_tenants(
         lodge_id=lodge_id,
         landlord_user=landlord_user,
         skip=skip,
-        limit=limit
+        limit=limit,
+        status=status
     )
 
 

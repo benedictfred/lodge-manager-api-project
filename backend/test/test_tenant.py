@@ -21,7 +21,7 @@ def test_tenant_get_personal_details_returns_200(authenticated_tenant_client, ad
     assert data['tenant_type'] == add_tenant_to_db.tenant_type
 
 
-def test_mock_get_tenant_history(test_db, add_tenant_to_db, tenant_lease_history_in_db):
+def test_mock_get_tenant_history(test_db, add_tenant_to_db, tenant_lease_history_in_db): #TODO: this looks unfinished
     db_items = lease_services.get_filtered_leases_tenant(test_db, tenant_profile=add_tenant_to_db)
 
 @pytest.mark.parametrize("update_payload, field_to_check, expected_value", [

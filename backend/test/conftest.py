@@ -10,10 +10,12 @@ from datetime import date, timedelta, datetime
 
 from app.api.deps import get_db
 from app.core import security
-from app.core.enums import StudentLevel, TenantType, RoomStatus, LeaseStatus
+from app.core.enums import StudentLevel, TenantType, RoomStatus, LeaseStatus, TenantStatus
 from app.main import app
 from app.db.session import Base
 from fastapi.testclient import TestClient
+
+from app.models.tenantprofile import TenantProfile
 from app.schemas import invitation as schema_invite
 from app.models.lease import Lease
 from app.schemas import user as schema_user
@@ -415,7 +417,7 @@ def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db, invite_schema
     A pytest fixture that adds multiple tenants to the database in a specific lodge.
     """
     max_tenants = 10
-    db_tenants = []
+    db_tenants: list[TenantProfile] = []
     for i in range(max_tenants):
         inv_schema = invite_schema_factory(lodge_id=add_lodge_to_db.id)
         db_invite = invite_service.invite_tenant(test_db, invite_in=inv_schema, landlord_id=add_landlord_to_db.id)
@@ -430,12 +432,26 @@ def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db, invite_schema
     return db_tenants
 
 @pytest.fixture
+def tenants_in_db_different_status(test_db, tenants_in_db):
+    db_status_tenants: list[TenantProfile] = []
+    status_filters = [TenantStatus.PENDING, TenantStatus.APPROVED, TenantStatus.REJECTED]
+
+    for i in range(len(tenants_in_db)):
+        selected_status = status_filters[i % len(status_filters)]
+        tenant = tenants_in_db[i]
+        tenant.status = selected_status
+        test_db.commit()
+        db_status_tenants.append(tenant)
+    return db_status_tenants
+
+@pytest.fixture
 def add_tenant_to_db(test_db, mock_tenant_schema, add_lodge_to_db):
     """
     A pytest fixture that adds a tenant to the database.
     """
     t_schema = mock_tenant_schema
     return tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
+
 
 
 @pytest.fixture
@@ -525,7 +541,9 @@ def add_active_lease_to_db(test_db, lease_schema_factory,add_room_to_db, add_ten
     room_id = add_room_to_db.id
 
     lease_schema = lease_schema_factory(room_id=room_id, tenant_id=tenant_id)
-
+    tenant = tenant_services.fetch_tenant_by_landlord(test_db, tenant_id= tenant_id, current_user=add_landlord_to_db)
+    tenant.status = TenantStatus.APPROVED
+    test_db.commit()
     return lease_services.create_new_lease(
         db=test_db,
         lease_data=lease_schema,
@@ -541,6 +559,11 @@ def add_overdue_lease_to_db(test_db,lease_schema_factory, add_landlord_to_db, ad
     """
     tenant_id = add_tenant_to_db.id
     room_id = add_room_to_db.id
+
+    tenant = tenant_services.fetch_tenant_by_landlord(test_db, tenant_id=tenant_id, current_user=add_landlord_to_db)
+    tenant.status = TenantStatus.APPROVED
+    test_db.commit()
+
     return lease_services.create_new_lease(
         test_db,
         lease_data=lease_schema_factory(tenant_id=tenant_id, room_id=room_id, end_date=date.today() - timedelta(days=10)),
@@ -583,6 +606,12 @@ def add_active_lease_to_diff_landlord_lodge(test_db, lease_schema_factory, add_d
         tenant_id=add_diff_landlord_tenant.id,
         room_id=add_diff_landlord_room.id,
     )
+
+    tenant = tenant_services.fetch_tenant_by_landlord(test_db, tenant_id= lease_data.tenant_id,
+                                                      current_user=add_different_landlord)
+    tenant.status = TenantStatus.APPROVED
+    test_db.commit()
+
     return lease_services.create_new_lease(
         db=test_db,
         lease_data=lease_data,
@@ -611,6 +640,8 @@ def leases_in_db(test_db, lease_schema_factory, lease_statuses, add_landlord_to_
             start_date=date.today() - timedelta(days=random.randint(1, 365)), # Random start date
             end_date=date.today() + timedelta(days=random.randint(1, 365)), # Random end date
         )
+        tenant.status = TenantStatus.APPROVED
+        test_db.commit()
         new_lease = lease_services.create_new_lease(
             db=test_db,
             lease_data=lease_data,
@@ -649,7 +680,9 @@ def tenant_lease_history_in_db(test_db, lease_schema_factory, add_landlord_to_db
             start_date=date.today() - timedelta(days=365 * (i+1)) if status == LeaseStatus.OVERDUE else date.today() - timedelta(days=20 * (i + 1)),# Start date in the past
             end_date=date.today() - timedelta(days=365 * i) if status == LeaseStatus.OVERDUE else (date.today() - timedelta(days=20 * (i + 1))) + timedelta(days=365),
         )
-        
+
+        tenant.status = TenantStatus.APPROVED
+        test_db.commit()
         new_lease = lease_services.create_new_lease(
             db=test_db,
             lease_data=lease_data,
@@ -820,9 +853,12 @@ def add_dashboard_stats(test_db, add_lodge_to_db, add_landlord_to_db, room_schem
         elif scenario == "PENDING_OWING":
             status = LeaseStatus.PENDING_TERMINATION
             total_paid = 2000
-            
+
+        tenant.status = TenantStatus.APPROVED
+        test_db.commit()
         lease_data = lease_schema_factory(tenant_id=tenant.id, room_id=room.id, agreed_rent_amt=5000, total_amt_paid=total_paid,
                                           start_date=start_date, end_date=end_date)
+
         db_lease = lease_services.create_new_lease(test_db, lease_data=lease_data, landlord_user=add_landlord_to_db)
 
         if scenario in ['PENDING', 'PENDING_OWING']:

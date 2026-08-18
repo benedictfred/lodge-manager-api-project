@@ -15,7 +15,6 @@ from app.models.room import Room
 from app.models.user import User
 from app.schemas.payment import PaymentCreate
 from app.services import lodge_service
-from app.services.lease_services import verify_tenant_owns_lease
 
 
 def can_add_payment(total_payments: int, incoming_amt: int, agreed_amt: int) -> bool:
@@ -137,6 +136,8 @@ def fetch_tenant_lease_payments(
     Returns:
         list[Payment]: A list of payments for the lease.
     """
+    from app.services.lease_services import verify_tenant_owns_lease
+
     lease = crud_lease.get(db, item_id=lease_id)
 
     if not lease:
@@ -144,5 +145,6 @@ def fetch_tenant_lease_payments(
 
     if not verify_tenant_owns_lease(lease=lease, tenant_id=tenant_id):
         raise LeaseNotFoundError()
+
 
     return crud_payment.get_lease_payments(db, lease_id=lease_id, skip=skip, limit=limit)

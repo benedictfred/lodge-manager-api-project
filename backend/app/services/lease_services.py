@@ -4,7 +4,7 @@ Module providing lease-related business logic.
 This module contains services for managing leases.
 """
 from typing import Optional
-from app.core.enums import LeaseStatus, RoomStatus
+from app.core.enums import LeaseStatus, RoomStatus, TenantStatus
 from app.crud.tenantprofile import crud_tenant
 from app.models.lease import Lease
 from app.models.room import Room
@@ -16,7 +16,8 @@ from app.services import lodge_service, room_service
 from app.crud.lease import crud_lease
 from app.core.exceptions import (RoomNotFoundError,
                                  LeaseNotFoundError, InvalidLeaseActionError, TenantProfileNotFoundError,
-                                 RoomIsOccupiedError)
+                                 RoomIsOccupiedError, RentAmtExceededError, UnapprovedTenantError)
+from app.services.payment_service import can_add_payment
 
 
 def create_new_lease(
@@ -50,7 +51,19 @@ def create_new_lease(
     if active_lease:
         raise InvalidLeaseActionError(lease_status=active_lease.computed_status)
 
-    return crud_lease.create_lease(db, lease_data=lease_data, room=room)
+    default_total_payments = 0
+    if not can_add_payment(total_payments=default_total_payments, incoming_amt=lease_data.total_amt_paid,
+                           agreed_amt=lease_data.agreed_rent_amt):
+        raise RentAmtExceededError(
+            attempted=lease_data.total_amt_paid,
+            current_total=default_total_payments,
+            agreed=lease_data.agreed_rent_amt
+        )
+
+    if tenant.status != TenantStatus.APPROVED:
+        raise UnapprovedTenantError(tenant_id=tenant.id)
+
+    return crud_lease.create_lease(db, lease_data=lease_data)
 
 
 def get_filtered_landlord_leases(

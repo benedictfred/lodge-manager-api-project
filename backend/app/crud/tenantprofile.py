@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 
 from sqlalchemy import select
 
-from app.core.enums import InviteStatus
+from app.core.enums import InviteStatus, TenantStatus
 from app.models.invitation import Invite
 from app.models.tenantprofile import TenantProfile
 from app.models.user import User
@@ -48,11 +48,12 @@ class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfi
         db.refresh(db_tenant)
         return db_tenant
 
-    def get_tenants(self, db: Session, lodge_id: int, skip: int = 0, max_limit:int =50):
+    def get_tenants(self, db: Session, lodge_id: int, skip: int = 0, max_limit:int =50, status: TenantStatus|None= None):
         """
-        Get a list of tenants in a specific lodge.
+        Get a list of tenants in a specific lodge. filters on the status can be applied
 
         Args:
+            status(TenantStatus, optional): The status to filter by. Defaults to None
             db (Session): The database session.
             lodge_id (int): The ID of the lodge.
             skip (int, optional): Number of records to skip. Defaults to 0.
@@ -61,7 +62,13 @@ class CRUDTenantProfile(CRUDBase[TenantProfile, TenantProfileCreate, TenantProfi
         Returns:
             list[type[TenantProfile]]: A list of retrieved tenant profiles.
         """
-        stmt = select(TenantProfile).where(self.model.lodge_id == lodge_id).offset(skip).limit(max_limit)
+        stmt = select(TenantProfile).where(
+            self.model.lodge_id == lodge_id
+        ).offset(skip).limit(max_limit)
+
+        if status:
+            stmt = stmt.where(TenantProfile.status == status)
+
         tenants: list[TenantProfile] =  list(db.execute(stmt).scalars().all())
         return tenants
 

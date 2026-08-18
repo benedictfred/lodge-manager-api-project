@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 
+from app.core.enums import TenantStatus
 from test.conftest import base_url, add_lodge_to_db
 from test.test_room import room_url
 
@@ -166,10 +167,10 @@ def test_landlord_update_lodge_not_owned_returns_404(authenticated_landlord_clie
 
 def test_landlord_get_paginated_tenants_returns_200(authenticated_landlord_client, tenants_in_db, add_lodge_to_db):
     """
-    Tests that a landlord can get a paginated list of tenants in their lodge.
+    Tests that a landlord can get a paginated list of approved tenants in their lodge.
     """
     lodge_id = add_lodge_to_db.id
-    response = authenticated_landlord_client.get(f'{lodge_url}/{lodge_id}/tenants') # Assuming /tenants/ endpoint for listing
+    response = authenticated_landlord_client.get(f'{lodge_url}/{lodge_id}/tenants')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -213,6 +214,24 @@ def test_landlord_get_tenants_pagination_skip_exceeds_total(authenticated_landlo
 
     assert response.status_code == status.HTTP_200_OK
     assert len(data) == 0
+
+@pytest.mark.parametrize(
+    'status_filter', [
+        TenantStatus.PENDING,
+        TenantStatus.APPROVED,
+        TenantStatus.REJECTED
+    ]
+)
+def test_landlord_get_tenants_by_status(authenticated_landlord_client, tenants_in_db_different_status,
+                                        add_lodge_to_db, status_filter):
+
+    lodge_id = add_lodge_to_db.id
+    response = authenticated_landlord_client.get(f'{lodge_url}/{lodge_id}/tenants?status={status_filter.value}')
+    data = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    for item in data:
+        assert item['status'] == status_filter.value
 
 def test_landlord_get_tenants_from_non_existent_lodge_returns_404(authenticated_landlord_client):
     """
