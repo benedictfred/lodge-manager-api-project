@@ -2,17 +2,23 @@ import pytest
 from fastapi import status
 from datetime import timedelta
 
-from app.core.enums import LeaseStatus
+from app.core.enums import LeaseStatus, TenantStatus
+from app.services import tenant_services
 from test.conftest import base_url
 
 lease_url = f'{base_url}/leases'
 
-def test_landlord_create_lease_returns_200(authenticated_landlord_client, mock_lease_schema):
+def test_landlord_create_lease_returns_200(test_db, authenticated_landlord_client,add_landlord_to_db, mock_lease_schema):
     """
     Tests that a landlord can create a lease successfully.
     """
     payload = mock_lease_schema.model_dump(mode='json') # Use mode='json' for date serialization
-    
+
+    tenant = tenant_services.fetch_tenant_by_landlord(test_db, tenant_id=mock_lease_schema.tenant_id,
+                                                      current_user=add_landlord_to_db)
+    tenant.status = TenantStatus.APPROVED
+    test_db.commit()
+
     response = authenticated_landlord_client.post(lease_url, json=payload)
     data = response.json()
 
@@ -25,6 +31,32 @@ def test_landlord_create_lease_returns_200(authenticated_landlord_client, mock_l
     assert data['end_date'] == mock_lease_schema.end_date.isoformat()
     assert 'id' in data
     assert 'created_at' in data
+
+def test_landlord_create_lease_for_unapproved_tenant_returns_400(authenticated_landlord_client, mock_lease_schema):
+    """
+        Tests that a landlord can create a lease successfully.
+        """
+    payload = mock_lease_schema.model_dump(mode='json')  # Use mode='json' for date serialization
+
+    response = authenticated_landlord_client.post(lease_url, json=payload)
+    data = response.json()
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert 'Tenant is not approved by landlord' in data['detail']
+
+def test_landlord_create_lease_upfront_payment_exceeds_agreed_rent_returns_422(authenticated_landlord_client, mock_lease_schema):
+    """
+    Tests that a landlord cannot create a lease where the upfront payment exceeds the agreed rent amount.
+    """
+    payload = mock_lease_schema.model_dump(mode='json')
+    payload['total_amt_paid'] = payload['agreed_rent_amt'] + 50000
+
+    response = authenticated_landlord_client.post(lease_url, json=payload)
+    data = response.json()
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert any("Upfront payment cannot exceed agreed rent amount" in err.get('msg', '') for err in data.get('detail', []))
+
 
 def test_landlord_create_lease_room_does_not_exist_returns_404(authenticated_landlord_client, mock_lease_schema):
     """
@@ -367,6 +399,8 @@ def test_landlord_terminate_lease_not_owned_returns_404(authenticated_landlord_c
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "Room could not be found" in data['detail']
 
+def test_landlord_create_lease_tenant_not_approved_returns_400(authenticated_landlord_client, add_tenant_to_db, ):
+    pass
 
 # --- Lease Termination Appeal Tests (Tenant) ---
 

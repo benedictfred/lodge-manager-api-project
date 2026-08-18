@@ -3,10 +3,11 @@ Pydantic schemas for the lease domain.
 
 This module contains schemas used to represent, create, and update lease agreements.
 """
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import Optional
 from datetime import date, datetime
 from app.core.enums import LeaseStatus
+from app.core.exceptions import RentAmtExceededError
 from app.schemas.room import RoomGridSummary
 
 
@@ -31,6 +32,12 @@ class LeaseBase(BaseModel):
 
 class LeaseCreate(LeaseBase):
     total_amt_paid: int = Field(..., ge=0, description="The total amount paid so far in KOBO.", examples=[20000000])
+
+    @model_validator(mode='after')
+    def upfront_pay_less_than_agreed_rent(self):
+        if self.total_amt_paid > self.agreed_rent_amt:
+            raise ValueError("Upfront payment cannot exceed agreed rent amount")
+        return self
 
 
 class LeaseResponse(LeaseBase):

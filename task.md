@@ -1,33 +1,36 @@
-# Frontend UI Revamp Task Checklist
+# Backend Reliability & Payments Roadmap
 
-## The Goal
-Upgrade `leases.html`, `lodges.html`, `rooms.html`, and `tenants.html` to a premium Light Theme featuring glassmorphism, gradient buttons, skeleton loaders, and modern data grids with sticky headers—without modifying `style.css`.
+## The Objective
+Resolve 3 critical domain validation and metrics integrity bugs, followed by architectural design and implementation of the end-to-end payment processing pipeline.
 
-## Why This Matters
-- **Perceived Value**: A premium UI significantly improves the user's trust and engagement with the application.
-- **Perceived Performance**: Using skeleton loaders gives users immediate visual feedback while waiting for data.
-- **Maintainability**: Reusing existing classes (`.glass-panel`, `.fade-in`) enforces a consistent design system without polluting stylesheets.
+---
 
-## The Checklist
+## Phase 1: Domain Invariant & Metric Bug Fixes
 
-### 1. Global Layout & Glassmorphism
-- [ ] **Background:** Ensure the main container uses a soft, light background that allows glass panels to stand out.
-- [ ] **Glass Panels:** Wrap the primary content areas (forms, tables, dashboards) in containers using the `.glass-panel` class.
-- [ ] **Animations:** Apply the `.fade-in` class to primary containers so they elegantly appear on load.
+### 1. Landlord Dashboard Tenant Metrics
+- **What:** Ensure landlord dashboard metrics only aggregate tenants with `APPROVED` status.
+- **Why:** Aggregating unapproved or rejected tenant applicants gives false occupancy numbers and distorts landlord analytics.
+- **Affected Layer:** [dashboard_service.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/services/dashboard_service.py) / [landlord_dashboard.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/api/v1/dashboards/landlord_dashboard.py)
+- **Status:** ✅ Completed (Verified with automated tests)
 
-### 2. Modern Data Grids with Sticky Headers
-- [ ] **Table Container:** Wrap your data tables in a container with a fixed height and scrollable Y-axis.
-- [ ] **Sticky Headers:** Ensure the `<th>` elements remain pinned to the top of the table container while scrolling.
-- [ ] **Row Styling:** Ensure table rows have a subtle hover effect to make data easily scannable.
+### 2. Lease Tenant Status Validation
+- **What:** Prevent assigning non-approved tenants to new or active leases.
+- **Why:** A lease represents an active contractual occupancy; allowing unapproved tenants breaks the tenant lifecycle state machine.
+- **Affected Layer:** [lease_services.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/services/lease_services.py) / [leases.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/api/v1/leases.py)
+- **Status:** ✅ Completed (Enforced at Service layer + `UnapprovedTenantError` + Test added)
 
-### 3. Gradient Buttons
-- [ ] **Primary Actions:** Update all primary action buttons (e.g., "Add Lodge", "Create Lease") to use modern gradient aesthetics.
-- [ ] **Interaction States:** Ensure buttons have appropriate hover and active states.
+### 3. Upfront Rent Amount Guardrail
+- **What:** Validate that `amount_paid_upfront` cannot exceed the `agreed_rent_amount` during lease creation.
+- **Why:** Guard against corrupted financial ledger balances, accidental negative receivables, and improper revenue accounting.
+- **Affected Layer:** [lease.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/schemas/lease.py) / [lease_services.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/services/lease_services.py)
+- **Status:** ✅ Completed (Pydantic `@model_validator` + Service `can_add_payment` guard)
 
-### 4. Skeleton Loaders
-- [ ] **Initial DOM State:** Implement skeleton loader elements (e.g., placeholder divs with pulsing animations) directly in the HTML where dynamic data will eventually be injected.
-- [ ] **Data Hydration:** Update your JavaScript logic to cleanly remove or hide the skeleton loaders once the actual data is rendered.
+---
 
-## Next Steps
-How would you approach structuring the skeleton loaders in the HTML before the data arrives? 
-Once you have a plan, start implementing the changes in `mock_frontend/lodges.html` first.
+## Phase 2: End-to-End Payment Integration Architecture
+
+### 4. Payment Gateway & Ledger System
+- **What:** Design and implement a secure, idempotent payment workflow (Payment initialization, Webhook handling, Transaction verification, Ledger & Receipt generation).
+- **Why:** Enable tenants to pay rent/fees digitally while guaranteeing double-entry ledger accuracy and preventing race conditions or replay attacks.
+- **Affected Layer:** [payment.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/models/payment.py) / [payment_service.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/services/payment_service.py) / [payments.py](file:///c:/Users/hp/PycharmProjects/LodgeOpsProject/backend/app/api/v1/payments.py)
+- **Status:** 🚀 In Progress (Architectural Brainstorming & Design)
