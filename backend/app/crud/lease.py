@@ -13,7 +13,8 @@ from app.schemas.lease import LeaseCreate, LeaseUpdate
 from app.models.lease import Lease
 from app.crud.base_crud import CRUDBase
 from datetime import datetime, date
-from sqlalchemy import select
+from sqlalchemy import select, or_
+
 
 class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
     """
@@ -98,13 +99,14 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
             room_id (int): The ID of the room.
 
         Returns:
-            Lease: The active lease or None.
+            Lease: The active lease(even if overdue) or None.
         """
         stmt =  select(self.model).where(
             self.model.room_id == room_id,
-            self.model.status.is_(None),
-            self.model.end_date >= date.today()
-        )
+            or_(
+                self.model.status.is_(None),
+                self.model.status == LeaseStatus.PENDING_TERMINATION
+        ))
         return db.execute(stmt).scalar_one_or_none()
 
     def lease_terminate(self, db: Session, db_lease: Lease) -> Lease:
