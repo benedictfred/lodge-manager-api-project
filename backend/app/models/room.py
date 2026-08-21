@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy import func
 from app.db.session import Base
 from sqlalchemy import String, Enum, ForeignKey, DateTime
-from app.core.enums import RoomStatus
+from app.core.enums import RoomStatus, LeaseStatus
 
 from typing import TYPE_CHECKING
 
@@ -67,7 +67,7 @@ class Room(Base):
             return RoomStatus.MAINTENANCE
 
         has_active_lease = any(
-            lease.status is None and lease.end_date >= date.today()
+            (lease.status is None or lease.status == LeaseStatus.PENDING_TERMINATION)
             for lease in self.leases
         )
 

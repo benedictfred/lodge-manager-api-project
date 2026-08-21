@@ -122,7 +122,6 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         """
         db_lease.status = LeaseStatus.TERMINATED
         db_lease.end_date = datetime.now()
-
         db.commit()
         db.refresh(db_lease)
         return db_lease
