@@ -161,7 +161,7 @@ def test_refresh_stolen_refresh_token_for_logged_out_user_returns_401(authentica
 
 def test_token_rotation_blocks_stolen_token(authenticated_landlord_client):
     # 1. Capture the FIRST (original) refresh token
-    first_refresh_token = authenticated_landlord_client.cookies.get(name='refresh_token')
+    first_refresh_token = authenticated_landlord_client.cookies.get('refresh_token')
 
     time.sleep(1)
 

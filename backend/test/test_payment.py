@@ -104,7 +104,7 @@ def test_landlord_create_payment_negative_amount_returns_422(authenticated_landl
     payload = mock_payment_schema.model_dump(mode='json')
     response = authenticated_landlord_client.post(f'{payment_url}/create-payment', json=payload)
     
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 def test_tenant_cannot_create_payment_returns_403(authenticated_tenant_client, mock_payment_schema):
     """

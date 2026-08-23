@@ -54,7 +54,7 @@ def test_landlord_create_lease_upfront_payment_exceeds_agreed_rent_returns_422(a
     response = authenticated_landlord_client.post(lease_url, json=payload)
     data = response.json()
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert any("Upfront payment cannot exceed agreed rent amount" in err.get('msg', '') for err in data.get('detail', []))
 
 
