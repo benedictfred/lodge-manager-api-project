@@ -21,6 +21,7 @@ from app.schemas.room import RoomGridSummary
 if TYPE_CHECKING:
     from app.models.lodge import Lodge
     from app.models.lease import Lease
+    from app.models.invitation import Invite
 
 
 class Room(Base):
@@ -37,6 +38,7 @@ class Room(Base):
         created_at (datetime): Timestamp when the room was created.
         leases (Lease): Relationship to the leases associated with this room.
         lodge (Lodge): Relationship to the lodge containing this room.
+        invites (list[Invite]): Relationship to invitations sent for this room.
     """
     __tablename__ = 'rooms'
 
@@ -53,6 +55,7 @@ class Room(Base):
     )
     leases: Mapped[list["Lease"]] = relationship( back_populates='room')
     lodge: Mapped["Lodge"] = relationship( back_populates='rooms')
+    invites: Mapped[list["Invite"]] = relationship(back_populates='room', cascade='all, delete-orphan')
 
     __table_args__ = (
         UniqueConstraint(

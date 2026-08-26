@@ -166,3 +166,15 @@ class UnapprovedTenantError(BaseLodgeOpsError):
         }
 
         super().__init__(detail=self.msg, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+class ActiveInviteAlreadyExistsError(BaseLodgeOpsError):
+    def __init__(self, room_id: int):
+        self.detail = f"Room already has an active pending invitation."
+        super().__init__(detail=self.detail, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+class RoomNotAvailableError(BaseLodgeOpsError):
+    def __init__(self, room_no: str, room_status: str):
+        self.detail = f"Room {room_no} is currently {room_status} and cannot receive new invitations."
+        super().__init__(detail=self.detail, status_code=status.HTTP_400_BAD_REQUEST)

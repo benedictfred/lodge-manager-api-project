@@ -46,4 +46,4 @@ class Lodge(Base):
     owner: Mapped["User"] = relationship(back_populates='lodges')
     rooms: Mapped[list["Room"]] = relationship(back_populates='lodge', cascade='all, delete-orphan')
     tenantprofiles: Mapped[list["TenantProfile"]] = relationship( back_populates='lodge', cascade='all, delete-orphan')
-    invites: Mapped[list['Invite']] = relationship(back_populates='lodge',cascade='all, delete-orphan')
+
