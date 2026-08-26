@@ -5,7 +5,7 @@ This module contains the CRUD operations for Lease models.
 """
 from typing import Optional
 from sqlalchemy.orm import Session, joinedload
-from app.core.enums import LeaseStatus
+from app.core.enums import LeaseStatus, TenantStatus
 from app.models.payment import Payment
 from app.models.room import RoomStatus, Room
 from app.models.tenantprofile import TenantProfile
@@ -69,26 +69,36 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         return leases
 
 
-    def create_lease(self, db: Session, lease_data: LeaseCreate):
+    def create_lease(self, db: Session, lease_data: LeaseCreate, tenant: Optional[TenantProfile] = None):
         """
         Create a new lease and associated initial payment.
+        If the tenant was previously REJECTED, atomically flips their status to APPROVED.
 
         Args:
             db (Session): The database session.
             lease_data (LeaseCreate): The lease creation data.
+            tenant (Optional[TenantProfile]): The tenant profile associated with the lease.
 
         Returns:
             Lease: The newly created lease.
         """
         db_lease = self.model(**lease_data.model_dump(exclude={'total_amt_paid'}))
-        db_payment = Payment(amount_paid=lease_data.total_amt_paid)
-        db_lease.payments.append(db_payment)
+        if lease_data.total_amt_paid > 0:
+            db_payment = Payment(amount_paid=lease_data.total_amt_paid)
+            db_lease.payments.append(db_payment)
 
-        db.add(db_lease)
-        db.commit()
-        db.refresh(db_lease)
+        try:
+            if tenant and tenant.status == TenantStatus.REJECTED:
+                tenant.status = TenantStatus.APPROVED
+                db.add(tenant)
 
-        return db_lease
+            db.add(db_lease)
+            db.commit()
+            db.refresh(db_lease)
+            return db_lease
+        except Exception as e:
+            db.rollback()
+            raise e
 
     def get_active_lease_for_room(self, db: Session, room_id: int):
         """
@@ -128,7 +138,7 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
 
 
 
-    def  request_terminate_lease(self, db: Session, db_lease: Lease) -> Lease:
+    def request_terminate_lease(self, db: Session, db_lease: Lease) -> Lease:
         """
         Request termination for a lease.
 
@@ -143,6 +153,24 @@ class CRUDLease(CRUDBase[Lease, LeaseCreate, LeaseUpdate]):
         db.commit()
         db.refresh(db_lease)
         return db_lease
+
+    def has_active_lease(self, db: Session, tenant_id: int) -> bool:
+        """
+        Check if a tenant currently has any active (un-terminated) lease.
+        Uses SQL EXISTS for O(1) early-exit evaluation at the database engine level.
+        """
+        stmt = select(
+            select(self.model.id)
+            .where(
+                self.model.tenant_id == tenant_id,
+                or_(
+                    self.model.status.is_(None),
+                    self.model.status != LeaseStatus.TERMINATED
+                )
+            )
+            .exists()
+        )
+        return bool(db.execute(stmt).scalar())
 
 
 crud_lease = CRUDLease(Lease)

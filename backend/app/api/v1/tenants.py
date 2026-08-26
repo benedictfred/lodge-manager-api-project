@@ -168,34 +168,7 @@ def delete_tenant_by_id(
 
 from app.schemas import lease as schema_lease
 
-@router.patch(
-    '/{tenant_id}',
-    response_model=schema_tenant.TenantProfileResponse,
-    summary="Update tenant status",
-    description=(
-        "Allows a landlord to update a tenant's status (e.g., active, inactive). "
-        "Cannot set status to PENDING."
-    ),
-    response_description="Updated tenant profile",
-    responses={
-        400: {"model": ErrorResponseSchema, "description": "Cannot set tenant status to PENDING"},
-        401: {"model": ErrorResponseSchema, "description": "Missing, invalid, or expired access token"},
-        403: {"model": ErrorResponseSchema, "description": "Only landlord accounts can perform this action"},
-        404: {"model": ErrorResponseSchema, "description": "Tenant does not exist or does not belong to a lodge owned by this landlord"},
-    },
-)
-def landlord_update_tenant_status(
-        tenant_id: int,
-        update_data: schema_tenant.TenantStatusUpdate,
-        db: Session = Depends(get_db),
-        landlord_user: User = Depends(get_landlord_user)
-):
-    return tenant_services.update_tenant_profile_status(
-        db,
-        tenant_id=tenant_id,
-        update_data=update_data,
-        landlord_id=landlord_user.id
-    )
+
 
 
 @router.post(
@@ -221,7 +194,7 @@ def approve_tenant(
         db: Session = Depends(get_db),
         landlord_user: User = Depends(get_landlord_user)
 ):
-    return tenant_services.approve_tenant_application(
+    return tenant_services.approve_invited_tenant_application(
         db=db,
         tenant_id=tenant_id,
         landlord_user=landlord_user,

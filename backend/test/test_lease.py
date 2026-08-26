@@ -8,9 +8,9 @@ from test.conftest import base_url
 
 lease_url = f'{base_url}/leases'
 
-def test_landlord_create_lease_returns_200(test_db, authenticated_landlord_client,add_landlord_to_db, mock_lease_schema):
+def test_landlord_create_lease_for_approved_existing_tenant_returns_200(test_db, authenticated_landlord_client,add_landlord_to_db, mock_lease_schema):
     """
-    Tests that a landlord can create a lease successfully.
+    Tests that a landlord can create a lease for an APPROVED existing resident.
     """
     payload = mock_lease_schema.model_dump(mode='json') # Use mode='json' for date serialization
 
@@ -32,10 +32,10 @@ def test_landlord_create_lease_returns_200(test_db, authenticated_landlord_clien
     assert 'id' in data
     assert 'created_at' in data
 
-def test_landlord_create_lease_for_unapproved_tenant_returns_400(authenticated_landlord_client, mock_lease_schema):
+def test_landlord_create_lease_for_pending_tenant_fails_returns_400(authenticated_landlord_client, mock_lease_schema):
     """
-        Tests that a landlord can create a lease successfully.
-        """
+    Tests that a landlord cannot create a lease for a PENDING tenant via the existing tenant endpoint.
+    """
     payload = mock_lease_schema.model_dump(mode='json')  # Use mode='json' for date serialization
 
     response = authenticated_landlord_client.post(lease_url, json=payload)
@@ -43,6 +43,30 @@ def test_landlord_create_lease_for_unapproved_tenant_returns_400(authenticated_l
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert 'Tenant is not approved by landlord' in data['detail']
+
+
+def test_landlord_create_lease_for_rejected_existing_tenant_returns_200_and_flips_status_to_approved(
+    test_db, authenticated_landlord_client, add_landlord_to_db, mock_lease_schema
+):
+    """
+    Tests that creating a lease for a REJECTED existing resident succeeds and atomically flips their status to APPROVED.
+    """
+    tenant = tenant_services.fetch_tenant_by_landlord(test_db, tenant_id=mock_lease_schema.tenant_id,
+                                                      current_user=add_landlord_to_db)
+    tenant.status = TenantStatus.REJECTED
+    test_db.commit()
+
+    payload = mock_lease_schema.model_dump(mode='json')
+    response = authenticated_landlord_client.post(lease_url, json=payload)
+    data = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert data['tenant_id'] == mock_lease_schema.tenant_id
+    assert data['status'] == 'Active'
+
+    # Verify status in database was updated to APPROVED
+    test_db.refresh(tenant)
+    assert tenant.status == TenantStatus.APPROVED
 
 def test_landlord_create_lease_upfront_payment_exceeds_agreed_rent_returns_422(authenticated_landlord_client, mock_lease_schema):
     """

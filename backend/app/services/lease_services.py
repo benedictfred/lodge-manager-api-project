@@ -20,13 +20,13 @@ from app.core.exceptions import (RoomNotFoundError,
 from app.services.payment_service import can_add_payment
 
 
-def create_new_lease(
+def create_new_lease_for_existing_tenant(
         db: Session,
         lease_data: LeaseCreate,
         landlord_user: User
 ):
     """
-    Create a new lease.
+    Create a new lease for an existing tenant (APPROVED or previously REJECTED).
 
     Args:
         db (Session): The database session.
@@ -60,10 +60,10 @@ def create_new_lease(
             agreed=lease_data.agreed_rent_amt
         )
 
-    if tenant.status != TenantStatus.APPROVED:
+    if tenant.status not in (TenantStatus.APPROVED, TenantStatus.REJECTED):
         raise UnapprovedTenantError(tenant_id=tenant.id)
 
-    return crud_lease.create_lease(db, lease_data=lease_data)
+    return crud_lease.create_lease(db, lease_data=lease_data, tenant=tenant)
 
 
 def get_filtered_landlord_leases(

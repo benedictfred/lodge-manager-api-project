@@ -2,7 +2,7 @@ import pytest
 from fastapi import status
 
 from app.core.enums import TenantStatus
-from app.services import lease_services
+from app.services import lease_services, room_service, invite_service
 from test.conftest import base_url, test_db
 
 tenant_url = f'{base_url}/tenants'
@@ -108,40 +108,97 @@ def test_landlord_cannot_hit_tenant_me_endpoint_returns_403(authenticated_landlo
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json()['detail'] == 'Only tenants are allowed.'
 
-def test_landlord_update_tenant_status_approved_returns_200(authenticated_landlord_client, add_tenant_to_db):
+def test_landlord_reject_pending_applicant_returns_200(authenticated_landlord_client, add_tenant_to_db):
+    """
+    Tests that a landlord can successfully reject a PENDING applicant.
+    """
     tenant_id = add_tenant_to_db.id
 
-    response = authenticated_landlord_client.patch(f'{tenant_url}/{tenant_id}', json={'status': 'Approved'})
+    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/reject')
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
     assert data['id'] == tenant_id
-    assert data['status'] == TenantStatus.APPROVED
+    assert data['status'] == TenantStatus.REJECTED
 
 
+def test_landlord_reject_approved_tenant_with_no_active_leases_returns_200(
+    test_db, authenticated_landlord_client, add_tenant_to_db
+):
+    """
+    Tests that a landlord can reject an APPROVED tenant as long as they have no active leases.
+    """
+    tenant = add_tenant_to_db
+    tenant.status = TenantStatus.APPROVED
+    test_db.commit()
 
-def test_landlord_update_tenant_status_pending_returns_400(authenticated_landlord_client, add_tenant_to_db):
-    tenant_id = add_tenant_to_db.id
+    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant.id}/reject')
+    data = response.json()
 
-    response = authenticated_landlord_client.patch(f'{tenant_url}/{tenant_id}', json={'status': 'Pending'})
+    assert response.status_code == status.HTTP_200_OK
+    assert data['id'] == tenant.id
+    assert data['status'] == TenantStatus.REJECTED
+
+
+def test_landlord_cannot_reject_tenant_with_active_lease_returns_400(
+    authenticated_landlord_client, add_active_lease_to_db
+):
+    """
+    Tests that a landlord cannot reject a tenant who currently holds an active lease.
+    """
+    tenant_id = add_active_lease_to_db.tenant_id
+
+    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/reject')
     data = response.json()
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert data['detail'] == f'Tenant Status is already Pending'
-
-def test_landlord_cannot_update_tenant_status_in_diff_lodge_returns_400(authenticated_landlord_client, add_diff_landlord_tenant):
-    diff_tenant_id = add_diff_landlord_tenant.id
-
-    response = authenticated_landlord_client.patch(f'{tenant_url}/{diff_tenant_id}', json={'status': 'Approved'})
-    data = response.json()
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert data['detail'] == f'Tenantprofile could not be found'
+    assert "Cannot reject a tenant with active leases" in data['detail']
 
 
-def test_landlord_approve_tenant_application_creates_lease_and_occupies_room_returns_201(
+def test_landlord_cannot_reject_already_rejected_tenant_returns_400(
+    test_db, authenticated_landlord_client, add_tenant_to_db
+):
+    """
+    Tests that attempting to reject an already REJECTED tenant raises a 400 error.
+    """
+    tenant = add_tenant_to_db
+    tenant.status = TenantStatus.REJECTED
+    test_db.commit()
+
+    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant.id}/reject')
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Tenant Status is already Rejected" in response.json()['detail']
+
+
+@pytest.mark.parametrize("initial_status,expected_error_status", [
+    (TenantStatus.APPROVED, "Approved"),
+    (TenantStatus.REJECTED, "Rejected"),
+])
+def test_landlord_cannot_approve_non_pending_applicant_returns_400(
+    test_db, authenticated_landlord_client, add_tenant_to_db, mock_tenant_approval_schema,
+    initial_status, expected_error_status
+):
+    """
+    Tests that an applicant whose status is not PENDING (i.e. already APPROVED or REJECTED)
+    cannot be approved via the onboarding route.
+    """
+    tenant = add_tenant_to_db
+    tenant.status = initial_status
+    test_db.commit()
+
+    payload = mock_tenant_approval_schema.model_dump(mode='json')
+    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant.id}/approve', json=payload)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert f"Tenant Status is already {expected_error_status}" in response.json()['detail']
+
+
+def test_landlord_approve_invited_tenant_application_creates_lease_and_occupies_room_returns_201(
     authenticated_landlord_client, add_tenant_to_db, mock_tenant_approval_schema
 ):
+    """
+    Tests that a landlord can successfully approve a PENDING applicant, creating a lease and occupying the room.
+    """
     tenant_id = add_tenant_to_db.id
     payload = mock_tenant_approval_schema.model_dump(mode='json')
 
@@ -154,28 +211,96 @@ def test_landlord_approve_tenant_application_creates_lease_and_occupies_room_ret
     assert data['agreed_rent_amt'] == mock_tenant_approval_schema.agreed_rent_amt
 
 
-def test_landlord_reject_tenant_application_returns_200(authenticated_landlord_client, add_tenant_to_db):
-    tenant_id = add_tenant_to_db.id
-
-    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/reject')
-    data = response.json()
-
-    assert response.status_code == status.HTTP_200_OK
-    assert data['id'] == tenant_id
-    assert data['status'] == TenantStatus.REJECTED
-
-
-def test_cannot_approve_already_approved_tenant_returns_400(
-    authenticated_landlord_client, add_tenant_to_db, mock_tenant_approval_schema
+def test_landlord_cannot_approve_non_existent_applicant_id_returns_404(
+    authenticated_landlord_client, mock_tenant_approval_schema
 ):
-    tenant_id = add_tenant_to_db.id
+    fake_tenant_id = 99999
     payload = mock_tenant_approval_schema.model_dump(mode='json')
 
-    # First approval succeeds
-    response1 = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/approve', json=payload)
-    assert response1.status_code == status.HTTP_201_CREATED
+    response = authenticated_landlord_client.post(f'{tenant_url}/{fake_tenant_id}/approve', json=payload)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "Tenantprofile could not be found" in response.json()['detail']
 
-    # Second approval fails
-    response2 = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/approve', json=payload)
-    assert response2.status_code == status.HTTP_400_BAD_REQUEST
-    assert "Tenant Status is already Approved" in response2.json()['detail']
+
+def test_landlord_cannot_approve_applicant_in_diff_lodge_returns_404(
+    authenticated_landlord_client, add_diff_landlord_tenant, mock_tenant_approval_schema
+):
+    payload = mock_tenant_approval_schema.model_dump(mode='json')
+    response = authenticated_landlord_client.post(f'{tenant_url}/{add_diff_landlord_tenant.id}/approve', json=payload)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "Tenantprofile could not be found" in response.json()['detail']
+
+
+def test_landlord_cannot_reject_non_existent_applicant_id_returns_404(
+    authenticated_landlord_client
+):
+    fake_tenant_id = 99999
+    response = authenticated_landlord_client.post(f'{tenant_url}/{fake_tenant_id}/reject')
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "Tenantprofile could not be found" in response.json()['detail']
+
+
+def test_landlord_cannot_reject_applicant_in_diff_lodge_returns_404(
+    authenticated_landlord_client, add_diff_landlord_tenant
+):
+    response = authenticated_landlord_client.post(f'{tenant_url}/{add_diff_landlord_tenant.id}/reject')
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "Tenantprofile could not be found" in response.json()['detail']
+
+
+def test_landlord_cannot_approve_applicant_if_room_already_occupied_returns_400(
+    test_db, authenticated_landlord_client, add_tenant_to_db, add_second_tenant_to_db,
+    mock_tenant_approval_schema, lease_schema_factory, add_landlord_to_db
+):
+    # Occupy the room with a second approved tenant first
+    second_tenant = add_second_tenant_to_db
+    second_tenant.status = TenantStatus.APPROVED
+    test_db.commit()
+
+    room_id = add_tenant_to_db.invite.room_id
+    lease_data = lease_schema_factory(tenant_id=second_tenant.id, room_id=room_id)
+    lease_services.create_new_lease_for_existing_tenant(test_db, lease_data=lease_data, landlord_user=add_landlord_to_db)
+
+    payload = mock_tenant_approval_schema.model_dump(mode='json')
+    response = authenticated_landlord_client.post(f'{tenant_url}/{add_tenant_to_db.id}/approve', json=payload)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Lease is already Active" in response.json()['detail']
+
+
+def test_tenant_signup_with_expired_invite_returns_400(
+    client, test_db, tenant_schema_factory, invite_schema_factory, add_landlord_to_db, add_lodge_to_db, room_schema_factory
+):
+    rm_schema = room_schema_factory(lodge_id=add_lodge_to_db.id, room_no="Expired Invite Sign-up Rm")
+    room = room_service.create_room_for_lodge(test_db, room_in=rm_schema, landlord_id=add_landlord_to_db.id)
+    from datetime import datetime, timedelta, timezone
+    expired_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    inv_schema = invite_schema_factory(room_id=room.id, lodge_id=add_lodge_to_db.id, expires_at=expired_date)
+    invite = invite_service.invite_tenant(test_db, invite_in=inv_schema, landlord_id=add_landlord_to_db.id)
+
+    t_schema = tenant_schema_factory(email="expired_signup@test.com", invite_id=invite.id)
+    response = client.post(f'{base_url}/auth/register/tenant', json=t_schema.model_dump(mode='json'))
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Invite is already Expired" in response.json()['detail']
+
+
+def test_tenant_signup_with_already_accepted_invite_returns_400(
+    client, test_db, add_tenant_to_db, tenant_schema_factory
+):
+    accepted_invite_id = add_tenant_to_db.invite.id
+    t_schema = tenant_schema_factory(email="second_signup@test.com", invite_id=accepted_invite_id)
+
+    response = client.post(f'{base_url}/auth/register/tenant', json=t_schema.model_dump(mode='json'))
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Invite is already Accepted" in response.json()['detail']
+
+
+def test_tenant_signup_with_non_existent_invite_returns_404(client, tenant_schema_factory):
+    import uuid
+    fake_invite_id = uuid.uuid4()
+    t_schema = tenant_schema_factory(email="fake_invite@test.com", invite_id=fake_invite_id)
+
+    response = client.post(f'{base_url}/auth/register/tenant', json=t_schema.model_dump(mode='json'))
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "Invite could not be found" in response.json()['detail']

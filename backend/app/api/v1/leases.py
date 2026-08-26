@@ -50,7 +50,7 @@ def create_new_lease(
         schema_lease.LeaseResponse: The created lease.
     """
 
-    return lease_services.create_new_lease(
+    return lease_services.create_new_lease_for_existing_tenant(
         db,
         lease_data=lease_data,
         landlord_user=landlord_user

@@ -580,7 +580,7 @@ def add_active_lease_to_db(test_db, lease_schema_factory,add_room_to_db, add_ten
     tenant = tenant_services.fetch_tenant_by_landlord(test_db, tenant_id= tenant_id, current_user=add_landlord_to_db)
     tenant.status = TenantStatus.APPROVED
     test_db.commit()
-    return lease_services.create_new_lease(
+    return lease_services.create_new_lease_for_existing_tenant(
         db=test_db,
         lease_data=lease_schema,
         landlord_user=add_landlord_to_db
@@ -600,9 +600,14 @@ def add_overdue_lease_to_db(test_db,lease_schema_factory, add_landlord_to_db, ad
     tenant.status = TenantStatus.APPROVED
     test_db.commit()
 
-    return lease_services.create_new_lease(
+    return lease_services.create_new_lease_for_existing_tenant(
         test_db,
-        lease_data=lease_schema_factory(tenant_id=tenant_id, room_id=room_id, end_date=date.today() - timedelta(days=10)),
+        lease_data=lease_schema_factory(
+            tenant_id=tenant_id,
+            room_id=room_id,
+            start_date=date.today() - timedelta(days=375),
+            end_date=date.today() - timedelta(days=10)
+        ),
         landlord_user=add_landlord_to_db
     )
 
@@ -648,7 +653,7 @@ def add_active_lease_to_diff_landlord_lodge(test_db, lease_schema_factory, add_d
     tenant.status = TenantStatus.APPROVED
     test_db.commit()
 
-    return lease_services.create_new_lease(
+    return lease_services.create_new_lease_for_existing_tenant(
         db=test_db,
         lease_data=lease_data,
         landlord_user=add_different_landlord
@@ -678,7 +683,7 @@ def leases_in_db(test_db, lease_schema_factory, lease_statuses, add_landlord_to_
         )
         tenant.status = TenantStatus.APPROVED
         test_db.commit()
-        new_lease = lease_services.create_new_lease(
+        new_lease = lease_services.create_new_lease_for_existing_tenant(
             db=test_db,
             lease_data=lease_data,
             landlord_user=add_landlord_to_db
@@ -719,7 +724,7 @@ def tenant_lease_history_in_db(test_db, lease_schema_factory, add_landlord_to_db
 
         tenant.status = TenantStatus.APPROVED
         test_db.commit()
-        new_lease = lease_services.create_new_lease(
+        new_lease = lease_services.create_new_lease_for_existing_tenant(
             db=test_db,
             lease_data=lease_data,
             landlord_user=add_landlord_to_db
@@ -895,7 +900,7 @@ def add_dashboard_stats(test_db, add_lodge_to_db, add_landlord_to_db, room_schem
         lease_data = lease_schema_factory(tenant_id=tenant.id, room_id=room.id, agreed_rent_amt=5000, total_amt_paid=total_paid,
                                           start_date=start_date, end_date=end_date)
 
-        db_lease = lease_services.create_new_lease(test_db, lease_data=lease_data, landlord_user=add_landlord_to_db)
+        db_lease = lease_services.create_new_lease_for_existing_tenant(test_db, lease_data=lease_data, landlord_user=add_landlord_to_db)
 
         if scenario in ['PENDING', 'PENDING_OWING']:
             db_lease.status = status

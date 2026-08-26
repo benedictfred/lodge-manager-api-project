@@ -13,7 +13,8 @@ from app.core.enums import UserRole, InviteStatus, TenantStatus
 from app.core.exceptions import (
     UserAlreadyExistError, LodgeNotFoundError, TenantProfileNotFoundError,
     InviteNotFoundError, InvalidInvitation, InvalidActionError,
-    RentAmtExceededError, InvalidLeaseActionError, RoomNotFoundError
+    RentAmtExceededError, InvalidLeaseActionError, RoomNotFoundError,
+    TenantHasActiveLeaseError
 )
 from app.core.security import get_password_hash
 from app.models.tenantprofile import TenantProfile
@@ -171,7 +172,7 @@ def fetch_tenant_by_landlord(
     return tenant
 
 
-def approve_tenant_application(
+def approve_invited_tenant_application(
         db: Session,
         tenant_id: int,
         landlord_user: User,
@@ -240,7 +241,7 @@ def reject_tenant_application(
         landlord_user: User
 ) -> TenantProfile:
     """
-    Reject a tenant's onboarding application.
+    Reject a tenant application or an approved tenant profile without active leases.
 
     Args:
         db (Session): The database session.
@@ -259,25 +260,14 @@ def reject_tenant_application(
     if tenant.lodge.landlord_id != landlord_user.id:
         raise TenantProfileNotFoundError()
 
-    if tenant.status != TenantStatus.PENDING:
+    # Rule 1: Cannot reject someone who is already REJECTED
+    if tenant.status == TenantStatus.REJECTED:
         raise InvalidActionError(error_name='Tenant Status', error_value=tenant.status.value)
 
+    # Rule 2: Cannot reject an approved tenant if they currently have any active lease
+    if crud_lease.has_active_lease(db, tenant_id=tenant.id):
+        raise TenantHasActiveLeaseError()
+
     return crud_tenant.reject_tenant(db, tenant=tenant)
-
-
-def update_tenant_profile_status(db: Session, tenant_id: int, landlord_id: int, update_data: TenantStatusUpdate):
-    options = joinedload(TenantProfile.lodge)
-    tenant = crud_tenant.get(db, tenant_id, options)
-
-    if not tenant:
-        raise TenantProfileNotFoundError()
-
-    if tenant.lodge.landlord_id != landlord_id:
-        raise TenantProfileNotFoundError()
-
-    if update_data.status == TenantStatus.PENDING:
-        raise InvalidActionError(error_name='Tenant Status', error_value=update_data.status)
-
-    return crud_tenant.update(db, update_data=update_data, db_obj=tenant)
 
 

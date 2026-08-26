@@ -178,3 +178,11 @@ class RoomNotAvailableError(BaseLodgeOpsError):
     def __init__(self, room_no: str, room_status: str):
         self.detail = f"Room {room_no} is currently {room_status} and cannot receive new invitations."
         super().__init__(detail=self.detail, status_code=status.HTTP_400_BAD_REQUEST)
+
+
+class TenantHasActiveLeaseError(BaseLodgeOpsError):
+    def __init__(self):
+        super().__init__(
+            detail="Cannot reject a tenant with active leases. Terminate all leases first.",
+            status_code=status.HTTP_400_BAD_REQUEST
+        )

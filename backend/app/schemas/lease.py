@@ -31,12 +31,14 @@ class LeaseBase(BaseModel):
 
 
 class LeaseCreate(LeaseBase):
-    total_amt_paid: int = Field(..., ge=0, description="The total amount paid so far in KOBO.", examples=[20000000])
+    total_amt_paid: int = Field(..., gt=0, description="The initial upfront payment in KOBO.", examples=[20000000])
 
     @model_validator(mode='after')
-    def upfront_pay_less_than_agreed_rent(self):
+    def validate_lease_terms(self):
+        if self.end_date <= self.start_date:
+            raise ValueError("Lease end date must be after the start date.")
         if self.total_amt_paid > self.agreed_rent_amt:
-            raise ValueError("Upfront payment cannot exceed agreed rent amount")
+            raise ValueError("Upfront payment cannot exceed agreed rent amount.")
         return self
 
 

@@ -61,7 +61,7 @@ class TenantApprovalCreate(BaseModel):
     start_date: date = Field(..., description="The start date of the lease.", examples=["2026-01-01"])
     end_date: date = Field(..., description="The end date of the lease.", examples=["2026-12-31"])
     agreed_rent_amt: int = Field(..., ge=0, description="The agreed ANNUAL rental amount in KOBO.", examples=[20000000])
-    total_amt_paid: int = Field(0, ge=0, description="The initial upfront payment in KOBO.", examples=[20000000])
+    total_amt_paid: int = Field(..., gt=0, description="The initial upfront payment in KOBO.", examples=[20000000])
 
     @model_validator(mode='after')
     def validate_lease_terms(self):
