@@ -142,7 +142,8 @@ All routes are prefixed with `/api/v1`. Interactive documentation is available a
 | `GET` | `/profile` | Tenant | Get the authenticated tenant's own profile |
 | `PATCH` | `/profiles/me` | Tenant | Update emergency contact and academic information |
 | `GET` | `/profile/{tenant_id}` | Landlord | Get a specific tenant's profile (scoped to landlord's lodge) |
-| `PATCH` | `/{tenant_id}` | Landlord | Approve or reject a pending tenant |
+| `POST` | `/{tenant_id}/approve` | Landlord | Approve a pending tenant application |
+| `POST` | `/{tenant_id}/reject` | Landlord | Reject a pending tenant application |
 | `DELETE` | `/{tenant_id}` | Authenticated | Delete a tenant profile |
 
 ### Leases — `/api/v1/leases`

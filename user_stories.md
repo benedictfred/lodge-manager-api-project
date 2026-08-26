@@ -16,12 +16,12 @@ This document defines the complete functional specification, user personas, end-
 
 | # | Endpoint Route & Method | Service Layer Function (`app/services/*`) | CRUD Layer Function (`app/crud/*`) | Core Database Models Touched (`app/models/*`) | Key Invariants Enforced in Code |
 | :- | :--- | :--- | :--- | :--- | :--- |
-| **1** | `POST /api/v1/users/register/landlord` | `user_service.sign_up_landlord` | `crud_user.get_user_by_email`<br>`crud_user.create` | `User` | Duplicate email check; bcrypt hashing; forces `UserRole.LANDLORD`. |
-| **2** | `POST /api/v1/users/register/tenant` | `tenant_services.sign_up_tenant` | `crud_invite.get_invite_record_by_id`<br>`crud_user.get_user_by_email`<br>`crud_tenant.create_tenant` | `User`<br>`TenantProfile`<br>`Invite` | Checks `invite.is_expired`; checks `invite.status != ACCEPTED`; creates `TenantProfile(status=PENDING)`; marks `Invite(status=ACCEPTED)`. |
-| **3** | `POST /api/v1/users/login` | `user_service.login_authenticated_user` | `crud_user.get_user_by_email`<br>`crud_user.create_new_refresh_token_record` | `User`<br>`RefreshToken` | `verify_password_hash`; issues JWT access token; sets HttpOnly session cookies. |
-| **4** | `POST /api/v1/users/refresh` | `user_service.refresh_access_token` | `crud_user.get`<br>`crud_user.get_refresh_token`<br>`crud_user.delete_refresh_token`<br>`crud_user.create_new_refresh_token_record` | `User`<br>`RefreshToken` | JWT signature verification; validates active user; single-use token rotation (deletes old token, writes new one). |
-| **5** | `GET /api/v1/users/me` | *Dependency Injection* (`get_current_user`) | `crud_user.get` | `User` | Validates JWT bearer/cookie; returns authenticated identity. |
-| **6** | `POST /api/v1/users/logout` | `user_service.logout_authenticated_user` | `crud_user.delete_refresh_token` | `RefreshToken` | Deletes DB session token; clears HttpOnly response cookies. |
+| **1** | `POST /api/v1/auth/register/landlord` | `user_service.sign_up_landlord` | `crud_user.get_user_by_email`<br>`crud_user.create` | `User` | Duplicate email check; bcrypt hashing; forces `UserRole.LANDLORD`. |
+| **2** | `POST /api/v1/auth/register/tenant` | `tenant_services.sign_up_tenant` | `crud_invite.get_invite_record_by_id`<br>`crud_user.get_user_by_email`<br>`crud_tenant.create_tenant` | `User`<br>`TenantProfile`<br>`Invite` | Checks `invite.is_expired`; checks `invite.status != ACCEPTED`; creates `TenantProfile(status=PENDING)`; marks `Invite(status=ACCEPTED)`. |
+| **3** | `POST /api/v1/auth/login` | `user_service.login_authenticated_user` | `crud_user.get_user_by_email`<br>`crud_user.create_new_refresh_token_record` | `User`<br>`RefreshToken` | `verify_password_hash`; issues JWT access token; sets HttpOnly session cookies. |
+| **4** | `POST /api/v1/auth/refresh` | `user_service.refresh_access_token` | `crud_user.get`<br>`crud_user.get_refresh_token`<br>`crud_user.delete_refresh_token`<br>`crud_user.create_new_refresh_token_record` | `User`<br>`RefreshToken` | JWT signature verification; validates active user; single-use token rotation (deletes old token, writes new one). |
+| **5** | `GET /api/v1/auth/me` | *Dependency Injection* (`get_current_user`) | `crud_user.get` | `User` | Validates JWT bearer/cookie; returns authenticated identity. |
+| **6** | `POST /api/v1/auth/logout` | `user_service.logout_authenticated_user` | `crud_user.delete_refresh_token` | `RefreshToken` | Deletes DB session token; clears HttpOnly response cookies. |
 | **7** | `POST /api/v1/invites/` | `invite_service.invite_tenant` | `lodge_service.verify_lodge_ownership`<br>`crud_invite.add_invite_record` | `Invite`<br>`Lodge` | Verifies landlord owns lodge; generates UUIDv7 token with expiration timestamp. |
 | **8** | `GET /api/v1/invites/{invite_id}` | `invite_service.fetch_invite_record` | `crud_invite.get_invite_record_by_id` | `Invite`<br>`Lodge` | Public access; evaluates dynamic `@property is_expired`; returns lodge name. |
 | **9** | `POST /api/v1/lodges/register` | `lodge_service.create_new_lodge_for_landlord` | `crud_lodge.get_by_name_and_landlord`<br>`crud_lodge.insert_lodge_tree` | `Lodge`<br>`Room` | Unique lodge name per landlord; supports optional `room_generator` for bulk room pre-creation. |
@@ -37,20 +37,21 @@ This document defines the complete functional specification, user personas, end-
 | **19** | `GET /api/v1/tenants/profile` | `tenant_services.fetch_tenant` | `current_user.tenant_profile` | `TenantProfile`<br>`User` | Resolves authenticated tenant's profile. |
 | **20** | `PATCH /api/v1/tenants/profiles/me` | `tenant_services.update_tenant_profile` | `crud_tenant.update_tenant` | `TenantProfile`<br>`User` | Updates student level, department, reg no, emergency phone. |
 | **21** | `GET /api/v1/tenants/profile/{tenant_id}` | `tenant_services.fetch_tenant_by_landlord` | `crud_tenant.get` (joinedload `TenantProfile.lodge`) | `TenantProfile`<br>`Lodge` | Cross-checks `tenant.lodge.landlord_id == current_user.id`; returns full student record. |
-| **22** | `PATCH /api/v1/tenants/{tenant_id}` | `tenant_services.update_tenant_profile_status` | `crud_tenant.get` (joinedload `TenantProfile.lodge`)<br>`crud_tenant.update` | `TenantProfile` | Ownership check; **blocks resetting to `PENDING`**; sets status to `APPROVED` or `REJECTED`. |
-| **23** | `DELETE /api/v1/tenants/{tenant_id}` | `crud_tenant.delete_tenant` | `crud_tenant.delete_tenant` | `TenantProfile` | Purges tenant profile record from database. |
-| **24** | `POST /api/v1/leases/` | `lease_services.create_new_lease` | `room_service.verify_room_existence`<br>`crud_tenant.get`<br>`crud_lease.get_active_lease_for_room`<br>`payment_service.can_add_payment`<br>`crud_lease.create_lease` | `Lease`<br>`Room`<br>`TenantProfile`<br>`Payment` | **5 Core Invariants:**<br>1. Room belongs to landlord.<br>2. Tenant belongs to same lodge.<br>3. Room has no active lease.<br>4. Upfront payment `<= agreed_rent`.<br>5. Tenant status `== APPROVED`. |
-| **25** | `GET /api/v1/leases/{lodge_id}` | `lease_services.get_filtered_landlord_leases` | `lodge_service.verify_lodge_ownership`<br>`crud_lease.get_tenant_leases` | `Lease` | Landlord lease browser with multi-dimensional filtering (by room, tenant ID, or status). |
-| **26** | `GET /api/v1/leases/tenant/me` | `lease_services.get_filtered_leases_tenant` | `crud_lease.get_tenant_leases` | `Lease`<br>`TenantProfile` | Tenant self-contract history lookup. |
-| **27** | `PATCH /api/v1/leases/{lease_id}` | `lease_services.update_lease_details` | `crud_lease.get` (joinedload `Room.lodge`)<br>`crud_lease.update` | `Lease` | Verifies landlord ownership via `room.lodge`; amends lease terms. |
-| **28** | `PATCH /api/v1/leases/terminate/{lease_id}` | `lease_services.terminate_lease` | `lease_services.verify_lease_to_terminate`<br>`crud_lease.lease_terminate` | `Lease`<br>`Room` | Validates lease is not already terminated; sets `Lease.status=TERMINATED`; sets `Lease.actual_end_date=today`; sets `Room.status=VACANT`. |
-| **29** | `PATCH /api/v1/leases/me/terminate/{lease_id}` | `lease_services.appeal_for_lease_termination` | `lease_services.verify_lease_to_terminate`<br>`lease_services.verify_tenant_owns_lease`<br>`crud_lease.request_terminate_lease` | `Lease` | Validates tenant ownership; validates lease is active; sets `Lease.status=PENDING_TERMINATION`. |
-| **30** | `POST /api/v1/payments/create-payment` | `payment_service.add_payment_record` | `crud_lease.get` (joinedload `Room.lodge`)<br>`crud_payment.get_payments_aggregate_by_lease_id`<br>`payment_service.can_add_payment`<br>`crud_payment.create` | `Payment`<br>`Lease`<br>`Room` | **Ledger Ceiling Guard:** Verifies landlord ownership; blocks payments on terminated leases; prevents overpayments (`total + incoming <= agreed_rent`). |
-| **31** | `GET /api/v1/payments/{lease_id}` | `payment_service.fetch_payments_by_lease` | `crud_lease.get` (joinedload `Room.lodge`)<br>`crud_payment.get_lease_payments` | `Payment`<br>`Lease` | Landlord audit trail of all installment transactions for a specific lease. |
-| **32** | `GET /api/v1/payments/me/{lease_id}` | `payment_service.fetch_tenant_lease_payments` | `crud_lease.get`<br>`lease_services.verify_tenant_owns_lease`<br>`crud_payment.get_lease_payments` | `Payment`<br>`Lease` | Tenant itemized receipt lookup for their own lease payments. |
-| **33** | `GET /api/v1/dashboard-landlord/me/landlord/{lodge_id}` | `dashboard_service.get_landlord_dashboard` | `lodge_service.verify_lodge_ownership`<br>`crud_payment.get_potential_income_from_rooms`<br>`crud_payment.get_financials_for_active_leases`<br>`crud_payment.get_financial_for_forecasted_empty_rooms`<br>`crud_payment.get_total_unpaid_rent`<br>`crud_lodge.get_room_status_counts`<br>`crud_lodge.get_tenant_counts`<br>`crud_lodge.get_occupied_counts`<br>`crud_room.get_dashboard_rooms` | `Lodge`<br>`Room`<br>`Lease`<br>`Payment`<br>`TenantProfile` | Computes 5 financial metrics (`Potential`, `Expected`, `Collected`, `Unpaid`, `Forecasted`); aggregates occupancy %; buckets rooms into 7 clinical health states (`SAFE`, `EXPIRING`, `OWING`, `OVERDUE`, `PENDING`, `VACANT`, `MAINTENANCE`). |
-| **34** | `GET /api/v1/dashboard-landlord/lease-info/{lease_id}` | `dashboard_service.get_dashboard_lease_info` | `crud_lodge.get_room_lease_info` | `Lease`<br>`Room`<br>`TenantProfile`<br>`Payment` | Joins room, lease, tenant user, and payments to render real-time slide-over drawer details. |
-| **35** | `GET /api/v1/dashboard-tenant/me/tenants` | `dashboard_service.get_tenant_active_lease_stats` | `crud_lodge.get_tenant_dashboard_stats` | `Lease`<br>`Room`<br>`Payment` | Returns active lease countdown, days remaining, agreed rent, amount paid, and outstanding balance for student portal. |
+| **22** | `POST /api/v1/tenants/{tenant_id}/approve` | `tenant_services.approve_invited_tenant_application` | `crud_tenant.get`<br>`room_service.verify_room_existence`<br>`crud_lease.create_lease`<br>`crud_payment.create`<br>`crud_room.update` | `TenantProfile`<br>`Lease`<br>`Payment`<br>`Room` | Ownership check; sets status to `APPROVED`, atomically generates Lease and upfront Payment, sets Room to `OCCUPIED`. |
+| **23** | `POST /api/v1/tenants/{tenant_id}/reject` | `tenant_services.reject_tenant_application` | `crud_tenant.get`<br>`crud_tenant.update` | `TenantProfile` | Ownership check; sets status to `REJECTED`, leaves room vacant. |
+| **24** | `DELETE /api/v1/tenants/{tenant_id}` | `crud_tenant.delete_tenant` | `crud_tenant.delete_tenant` | `TenantProfile` | Purges tenant profile record from database. |
+| **25** | `POST /api/v1/leases/` | `lease_services.create_new_lease` | `room_service.verify_room_existence`<br>`crud_tenant.get`<br>`crud_lease.get_active_lease_for_room`<br>`payment_service.can_add_payment`<br>`crud_lease.create_lease` | `Lease`<br>`Room`<br>`TenantProfile`<br>`Payment` | **5 Core Invariants:**<br>1. Room belongs to landlord.<br>2. Tenant belongs to same lodge.<br>3. Room has no active lease.<br>4. Upfront payment `<= agreed_rent`.<br>5. Tenant status `== APPROVED`. |
+| **26** | `GET /api/v1/leases/{lodge_id}` | `lease_services.get_filtered_landlord_leases` | `lodge_service.verify_lodge_ownership`<br>`crud_lease.get_tenant_leases` | `Lease` | Landlord lease browser with multi-dimensional filtering (by room, tenant ID, or status). |
+| **27** | `GET /api/v1/leases/tenant/me` | `lease_services.get_filtered_leases_tenant` | `crud_lease.get_tenant_leases` | `Lease`<br>`TenantProfile` | Tenant self-contract history lookup. |
+| **28** | `PATCH /api/v1/leases/{lease_id}` | `lease_services.update_lease_details` | `crud_lease.get` (joinedload `Room.lodge`)<br>`crud_lease.update` | `Lease` | Verifies landlord ownership via `room.lodge`; amends lease terms. |
+| **29** | `PATCH /api/v1/leases/terminate/{lease_id}` | `lease_services.terminate_lease` | `lease_services.verify_lease_to_terminate`<br>`crud_lease.lease_terminate` | `Lease`<br>`Room` | Validates lease is not already terminated; sets `Lease.status=TERMINATED`; sets `Lease.actual_end_date=today`; sets `Room.status=VACANT`. |
+| **30** | `PATCH /api/v1/leases/me/terminate/{lease_id}` | `lease_services.appeal_for_lease_termination` | `lease_services.verify_lease_to_terminate`<br>`lease_services.verify_tenant_owns_lease`<br>`crud_lease.request_terminate_lease` | `Lease` | Validates tenant ownership; validates lease is active; sets `Lease.status=PENDING_TERMINATION`. |
+| **31** | `POST /api/v1/payments/create-payment` | `payment_service.add_payment_record` | `crud_lease.get` (joinedload `Room.lodge`)<br>`crud_payment.get_payments_aggregate_by_lease_id`<br>`payment_service.can_add_payment`<br>`crud_payment.create` | `Payment`<br>`Lease`<br>`Room` | **Ledger Ceiling Guard:** Verifies landlord ownership; blocks payments on terminated leases; prevents overpayments (`total + incoming <= agreed_rent`). |
+| **32** | `GET /api/v1/payments/{lease_id}` | `payment_service.fetch_payments_by_lease` | `crud_lease.get` (joinedload `Room.lodge`)<br>`crud_payment.get_lease_payments` | `Payment`<br>`Lease` | Landlord audit trail of all installment transactions for a specific lease. |
+| **33** | `GET /api/v1/payments/me/{lease_id}` | `payment_service.fetch_tenant_lease_payments` | `crud_lease.get`<br>`lease_services.verify_tenant_owns_lease`<br>`crud_payment.get_lease_payments` | `Payment`<br>`Lease` | Tenant itemized receipt lookup for their own lease payments. |
+| **34** | `GET /api/v1/dashboard-landlord/me/landlord/{lodge_id}` | `dashboard_service.get_landlord_dashboard` | `lodge_service.verify_lodge_ownership`<br>`crud_payment.get_potential_income_from_rooms`<br>`crud_payment.get_financials_for_active_leases`<br>`crud_payment.get_financial_for_forecasted_empty_rooms`<br>`crud_payment.get_total_unpaid_rent`<br>`crud_lodge.get_room_status_counts`<br>`crud_lodge.get_tenant_counts`<br>`crud_lodge.get_occupied_counts`<br>`crud_room.get_dashboard_rooms` | `Lodge`<br>`Room`<br>`Lease`<br>`Payment`<br>`TenantProfile` | Computes 5 financial metrics (`Potential`, `Expected`, `Collected`, `Unpaid`, `Forecasted`); aggregates occupancy %; buckets rooms into 7 clinical health states (`SAFE`, `EXPIRING`, `OWING`, `OVERDUE`, `PENDING`, `VACANT`, `MAINTENANCE`). |
+| **35** | `GET /api/v1/dashboard-landlord/lease-info/{lease_id}` | `dashboard_service.get_dashboard_lease_info` | `crud_lodge.get_room_lease_info` | `Lease`<br>`Room`<br>`TenantProfile`<br>`Payment` | Joins room, lease, tenant user, and payments to render real-time slide-over drawer details. |
+| **36** | `GET /api/v1/dashboard-tenant/me/tenants` | `dashboard_service.get_tenant_active_lease_stats` | `crud_lodge.get_tenant_dashboard_stats` | `Lease`<br>`Room`<br>`Payment` | Returns active lease countdown, days remaining, agreed rent, amount paid, and outstanding balance for student portal. |
 
 ---
 
@@ -79,21 +80,21 @@ This document defines the complete functional specification, user personas, end-
 > **So that** I can access my private multi-lodge management dashboard.
 
 * **Endpoints Satisfying This Story:**
-  * `POST /api/v1/users/register/landlord`
-  * `POST /api/v1/users/login`
-  * `POST /api/v1/users/refresh`
-  * `GET /api/v1/users/me`
-  * `POST /api/v1/users/logout`
+  * `POST /api/v1/auth/register/landlord`
+  * `POST /api/v1/auth/login`
+  * `POST /api/v1/auth/refresh`
+  * `GET /api/v1/auth/me`
+  * `POST /api/v1/auth/logout`
 
 * **End-to-End Orchestration Sequence:**
   ```
-  1. Client calls POST /api/v1/users/register/landlord (Email, Password, First/Last Name, Phone)
+  1. Client calls POST /api/v1/auth/register/landlord (Email, Password, First/Last Name, Phone)
      └── Database writes User record with hashed password and UserRole.LANDLORD
-  2. Client calls POST /api/v1/users/login (OAuth2 Password form: username=email, password)
+  2. Client calls POST /api/v1/auth/login (OAuth2 Password form: username=email, password)
      └── Backend sets access_token and refresh_token in HttpOnly cookies
-  3. Client calls GET /api/v1/users/me (with cookie) ➔ Receives active landlord profile
-  4. Periodic refresh: Client calls POST /api/v1/users/refresh ➔ Sliding session rotation
-  5. Session termination: Client calls POST /api/v1/users/logout ➔ Revokes refresh token
+  3. Client calls GET /api/v1/auth/me (with cookie) ➔ Receives active landlord profile
+  4. Periodic refresh: Client calls POST /api/v1/auth/refresh ➔ Sliding session rotation
+  5. Session termination: Client calls POST /api/v1/auth/logout ➔ Revokes refresh token
   ```
 
 ---
@@ -146,7 +147,7 @@ This document defines the complete functional specification, user personas, end-
 > **So that** my profile is linked to the lodge and ready for landlord approval.
 
 * **Endpoints Satisfying This Story:**
-  * `POST /api/v1/users/register/tenant`
+  * `POST /api/v1/auth/register/tenant`
   * `GET /api/v1/tenants/profile`
   * `PATCH /api/v1/tenants/profiles/me`
 
@@ -160,7 +161,8 @@ This document defines the complete functional specification, user personas, end-
 * **Endpoints Satisfying This Story:**
   * `GET /api/v1/lodges/{lodge_id}/tenants?status=Pending`
   * `GET /api/v1/tenants/profile/{tenant_id}`
-  * `PATCH /api/v1/tenants/{tenant_id}`
+  * `POST /api/v1/tenants/{tenant_id}/approve`
+  * `POST /api/v1/tenants/{tenant_id}/reject`
   * `DELETE /api/v1/tenants/{tenant_id}`
 
 ---
