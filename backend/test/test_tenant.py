@@ -137,3 +137,45 @@ def test_landlord_cannot_update_tenant_status_in_diff_lodge_returns_400(authenti
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert data['detail'] == f'Tenantprofile could not be found'
+
+
+def test_landlord_approve_tenant_application_creates_lease_and_occupies_room_returns_201(
+    authenticated_landlord_client, add_tenant_to_db, mock_tenant_approval_schema
+):
+    tenant_id = add_tenant_to_db.id
+    payload = mock_tenant_approval_schema.model_dump(mode='json')
+
+    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/approve', json=payload)
+    data = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert data['tenant_id'] == tenant_id
+    assert 'id' in data
+    assert data['agreed_rent_amt'] == mock_tenant_approval_schema.agreed_rent_amt
+
+
+def test_landlord_reject_tenant_application_returns_200(authenticated_landlord_client, add_tenant_to_db):
+    tenant_id = add_tenant_to_db.id
+
+    response = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/reject')
+    data = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert data['id'] == tenant_id
+    assert data['status'] == TenantStatus.REJECTED
+
+
+def test_cannot_approve_already_approved_tenant_returns_400(
+    authenticated_landlord_client, add_tenant_to_db, mock_tenant_approval_schema
+):
+    tenant_id = add_tenant_to_db.id
+    payload = mock_tenant_approval_schema.model_dump(mode='json')
+
+    # First approval succeeds
+    response1 = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/approve', json=payload)
+    assert response1.status_code == status.HTTP_201_CREATED
+
+    # Second approval fails
+    response2 = authenticated_landlord_client.post(f'{tenant_url}/{tenant_id}/approve', json=payload)
+    assert response2.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Tenant Status is already Approved" in response2.json()['detail']

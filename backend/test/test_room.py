@@ -304,6 +304,7 @@ def test_bulk_update_owned_and_not_owned_room_returns_404(authenticated_landlord
     vacant_room_id = vacant_rooms_in_db[0].id
     payload = {
         "room_ids": [vacant_room_id, 99999],
+
         "base_rent": 500000
     }
     response = authenticated_landlord_client.patch(
@@ -313,3 +314,59 @@ def test_bulk_update_owned_and_not_owned_room_returns_404(authenticated_landlord
     data = response.json()
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert data['detail'] == 'One Or More Rooms could not be found'
+
+
+def test_landlord_get_room_onboarding_state_pure_vacant_returns_200(authenticated_landlord_client, add_room_to_db):
+    """Test a newly created vacant room has no active invite and no pending applicant."""
+    response = authenticated_landlord_client.get(f'{room_url}/{add_room_to_db.id}')
+    data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert data['has_active_invite'] is False
+    assert data['pending_applicant'] is None
+
+
+def test_landlord_get_room_onboarding_state_active_unexpired_invite_returns_200(authenticated_landlord_client, add_invite_to_db):
+    """Test a room with an unexpired SENT invite correctly reflects has_active_invite=True."""
+    room_id = add_invite_to_db.room_id
+    response = authenticated_landlord_client.get(f'{room_url}/{room_id}')
+    data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert data['has_active_invite'] is True
+    assert data['pending_applicant'] is None
+
+
+def test_landlord_get_room_onboarding_state_active_expired_invite_returns_200(
+    authenticated_landlord_client, test_db, add_landlord_to_db, add_lodge_to_db, invite_schema_factory, room_schema_factory
+):
+    """Test a room where the invite is SENT but past its expires_at date reflects has_active_invite=False."""
+    from app.services import room_service, invite_service
+    from datetime import datetime, timedelta, timezone
+
+    rm_schema = room_schema_factory(room_no="Expired Invite Rm", lodge_id=add_lodge_to_db.id)
+    room = room_service.create_room_for_lodge(test_db, room_in=rm_schema, landlord_id=add_landlord_to_db.id)
+    
+    # Create an invite that expired 2 days ago
+    expired_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    inv_schema = invite_schema_factory(room_id=room.id, lodge_id=add_lodge_to_db.id, expires_at=expired_date)
+    invite_service.invite_tenant(test_db, invite_in=inv_schema, landlord_id=add_landlord_to_db.id)
+    
+    response = authenticated_landlord_client.get(f'{room_url}/{room.id}')
+    data = response.json()
+    
+    assert response.status_code == status.HTTP_200_OK
+    assert data['has_active_invite'] is False
+    assert data['pending_applicant'] is None
+
+
+def test_landlord_get_room_onboarding_state_pending_applicant_returns_200(authenticated_landlord_client, add_tenant_to_db):
+    """Test a room where the invite was ACCEPTED and tenant is PENDING populates the applicant data."""
+    # add_tenant_to_db automatically sets the invite to ACCEPTED and creates a PENDING tenant profile.
+    room_id = add_tenant_to_db.invite.room_id
+    response = authenticated_landlord_client.get(f'{room_url}/{room_id}')
+    data = response.json()
+    
+    assert response.status_code == status.HTTP_200_OK
+    assert data['has_active_invite'] is False
+    assert data['pending_applicant'] is not None
+    assert data['pending_applicant']['tenant_id'] == add_tenant_to_db.id
+    assert data['pending_applicant']['first_name'].lower() == add_tenant_to_db.user.first_name.lower()

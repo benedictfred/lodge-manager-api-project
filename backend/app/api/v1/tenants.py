@@ -166,6 +166,8 @@ def delete_tenant_by_id(
 
     crud_tenant.delete_tenant(db=db, db_tenant=tenant)
 
+from app.schemas import lease as schema_lease
+
 @router.patch(
     '/{tenant_id}',
     response_model=schema_tenant.TenantProfileResponse,
@@ -193,4 +195,60 @@ def landlord_update_tenant_status(
         tenant_id=tenant_id,
         update_data=update_data,
         landlord_id=landlord_user.id
+    )
+
+
+@router.post(
+    '/{tenant_id}/approve',
+    response_model=schema_lease.LeaseResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Approve tenant onboarding application",
+    description=(
+        "Approves a tenant's onboarding application and atomically generates "
+        "their lease and first upfront payment, setting the room status to OCCUPIED."
+    ),
+    response_description="Created lease agreement",
+    responses={
+        400: {"model": ErrorResponseSchema, "description": "Invalid dates, payment exceeds rent, or room not available"},
+        401: {"model": ErrorResponseSchema, "description": "Missing, invalid, or expired access token"},
+        403: {"model": ErrorResponseSchema, "description": "Only landlord accounts can perform this action"},
+        404: {"model": ErrorResponseSchema, "description": "Tenant or room not found"},
+    },
+)
+def approve_tenant(
+        tenant_id: int,
+        approval_data: schema_tenant.TenantApprovalCreate,
+        db: Session = Depends(get_db),
+        landlord_user: User = Depends(get_landlord_user)
+):
+    return tenant_services.approve_tenant_application(
+        db=db,
+        tenant_id=tenant_id,
+        landlord_user=landlord_user,
+        approval_data=approval_data
+    )
+
+
+@router.post(
+    '/{tenant_id}/reject',
+    response_model=schema_tenant.TenantProfileResponse,
+    summary="Reject tenant onboarding application",
+    description="Rejects a tenant's onboarding application, leaving the room vacant.",
+    response_description="Updated tenant profile with REJECTED status",
+    responses={
+        400: {"model": ErrorResponseSchema, "description": "Tenant is not in pending status"},
+        401: {"model": ErrorResponseSchema, "description": "Missing, invalid, or expired access token"},
+        403: {"model": ErrorResponseSchema, "description": "Only landlord accounts can perform this action"},
+        404: {"model": ErrorResponseSchema, "description": "Tenant does not exist or does not belong to this landlord"},
+    },
+)
+def reject_tenant(
+        tenant_id: int,
+        db: Session = Depends(get_db),
+        landlord_user: User = Depends(get_landlord_user)
+):
+    return tenant_services.reject_tenant_application(
+        db=db,
+        tenant_id=tenant_id,
+        landlord_user=landlord_user
     )

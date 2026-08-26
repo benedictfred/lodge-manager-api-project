@@ -212,20 +212,25 @@ def tenant_schema_factory():
 @pytest.fixture
 def invite_schema_factory():
     def _create(
-
-            lodge_id: int = 1,
-            expires_at: datetime = datetime.now()
+            room_id: int = 1,
+            expires_at: datetime = None,
+            lodge_id: int = 1
     ):
-
+        if expires_at is None:
+            expires_at = datetime.now() + timedelta(days=7)
         return schema_invite.InviteCreate(
-            lodge_id=lodge_id,
-            expires_at=expires_at
+            room_id=room_id,
+            expires_at=expires_at,
+            lodge_id=lodge_id
         )
     return _create
 
 @pytest.fixture
-def add_invite_to_db(test_db, invite_schema_factory, add_lodge_to_db, add_landlord_to_db):
+def add_invite_to_db(test_db, invite_schema_factory, add_lodge_to_db, add_landlord_to_db, room_schema_factory):
+    rm_schema = room_schema_factory(lodge_id=add_lodge_to_db.id, room_no="Invited Room 101")
+    room = room_service.create_room_for_lodge(test_db, room_in=rm_schema, landlord_id=add_landlord_to_db.id)
     inv_schema = invite_schema_factory(
+        room_id=room.id,
         lodge_id=add_lodge_to_db.id,
     )
     return invite_service.invite_tenant(
@@ -373,14 +378,16 @@ def maintenance_rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, ad
     for i in range(max_maintenance_rooms):
         room_data = room_schema_factory(
             room_no=f'maintenance room {i + 1}',
-            lodge_id=add_lodge_to_db.id,
-            status=RoomStatus.MAINTENANCE
+            lodge_id=add_lodge_to_db.id
         )
         new_maintenance_room = room_service.create_room_for_lodge(
             test_db,
             room_in=room_data,
             landlord_id=add_landlord_to_db.id
         )
+        new_maintenance_room.status = RoomStatus.MAINTENANCE
+        test_db.commit()
+        test_db.refresh(new_maintenance_room)
         db_maintenance_rooms.append(new_maintenance_room)
 
     return db_maintenance_rooms
@@ -412,14 +419,19 @@ def vacant_rooms_in_db(test_db, room_schema_factory, add_landlord_to_db, add_lod
     return db_rooms
 
 @pytest.fixture
-def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db, invite_schema_factory, add_landlord_to_db):
+def tenants_in_db(test_db, tenant_schema_factory, add_lodge_to_db, invite_schema_factory, add_landlord_to_db, room_schema_factory):
     """
     A pytest fixture that adds multiple tenants to the database in a specific lodge.
     """
     max_tenants = 10
     db_tenants: list[TenantProfile] = []
     for i in range(max_tenants):
-        inv_schema = invite_schema_factory(lodge_id=add_lodge_to_db.id)
+        rm_schema = room_schema_factory(
+            room_no=f'Tenant-Rm-{i + 1}',
+            lodge_id=add_lodge_to_db.id
+        )
+        room = room_service.create_room_for_lodge(test_db, room_in=rm_schema, landlord_id=add_landlord_to_db.id)
+        inv_schema = invite_schema_factory(lodge_id=add_lodge_to_db.id, room_id=room.id)
         db_invite = invite_service.invite_tenant(test_db, invite_in=inv_schema, landlord_id=add_landlord_to_db.id)
         t_schema = tenant_schema_factory(
             first_name=f'TenantFirst{i + 1}',
@@ -480,27 +492,51 @@ def authenticated_tenant_client(auth_client_factory, add_tenant_to_db):
     return client
 
 @pytest.fixture
-def add_second_tenant_to_db(test_db, tenant_schema_factory, add_lodge_to_db, invite_schema_factory, add_landlord_to_db):
+def add_second_tenant_to_db(test_db, tenant_schema_factory, add_lodge_to_db, invite_schema_factory, add_landlord_to_db, room_schema_factory):
     """
     A pytest fixture that adds a second tenant to the same lodge.
     """
-    inv_schema = invite_schema_factory(lodge_id=add_lodge_to_db.id)
+    rm_schema = room_schema_factory(lodge_id=add_lodge_to_db.id, room_no="Second Tenant Rm")
+    room = room_service.create_room_for_lodge(test_db, room_in=rm_schema, landlord_id=add_landlord_to_db.id)
+    inv_schema = invite_schema_factory(lodge_id=add_lodge_to_db.id, room_id=room.id)
     db_invite = invite_service.invite_tenant(test_db, invite_in=inv_schema, landlord_id=add_landlord_to_db.id)
 
     t_schema = tenant_schema_factory(email="tenant2@test.com", first_name="TenantB",
                                       invite_id=db_invite.id)
-    return tenant_services.sign_up_tenant(test_db, tenant_in=t_schema, )
+    return tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
 
 @pytest.fixture
 def add_diff_landlord_tenant(test_db, tenant_schema_factory, add_diff_landlord_lodge, add_different_landlord,
-                             invite_schema_factory):
+                             invite_schema_factory, room_schema_factory):
     """
     A pytest fixture that adds a tenant to a different landlord's lodge.
     """
-    inv_schema = invite_schema_factory(lodge_id=add_diff_landlord_lodge.id)
+    rm_schema = room_schema_factory(lodge_id=add_diff_landlord_lodge.id, room_no="Diff Landlord Rm")
+    room = room_service.create_room_for_lodge(test_db, room_in=rm_schema, landlord_id=add_different_landlord.id)
+    inv_schema = invite_schema_factory(lodge_id=add_diff_landlord_lodge.id, room_id=room.id)
     db_invite = invite_service.invite_tenant(test_db, invite_in=inv_schema, landlord_id=add_different_landlord.id)
     t_schema = tenant_schema_factory(email="tenant3@test.com", invite_id=db_invite.id)
     return tenant_services.sign_up_tenant(test_db, tenant_in=t_schema)
+
+@pytest.fixture
+def tenant_approval_schema_factory():
+    def _create(
+        start_date: date = date.today(),
+        end_date: date = date.today() + timedelta(days=365),
+        agreed_rent_amt: int = 250000,
+        total_amt_paid: int = 250000
+    ):
+        return schema_tenant.TenantApprovalCreate(
+            start_date=start_date,
+            end_date=end_date,
+            agreed_rent_amt=agreed_rent_amt,
+            total_amt_paid=total_amt_paid
+        )
+    return _create
+
+@pytest.fixture
+def mock_tenant_approval_schema(tenant_approval_schema_factory):
+    return tenant_approval_schema_factory()
 
 @pytest.fixture
 def lease_schema_factory():
