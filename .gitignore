@@ -50,7 +50,7 @@ htmlcov/
 
 Thumbs.db
 
-*.py
+/*.py
 
 openapi_dump.json
 
