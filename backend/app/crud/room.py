@@ -45,6 +45,49 @@ class CRUDRoom(CRUDBase[Room, RoomCreate, RoomUpdate]):
         )
         return db.execute(stmt).scalar()
 
+    def get_room_with_onboarding_state(self, db: Session, room_id: int):
+        from sqlalchemy.orm import aliased
+        from app.models.invitation import Invite
+        from app.models.tenantprofile import TenantProfile
+        from app.models.user import User
+        from app.core.enums import InviteStatus, TenantStatus
+        from datetime import datetime, timezone
+        
+        curr_time = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        ActiveInvite = aliased(Invite)
+        PendingTenantInvite = aliased(Invite)
+
+        stmt = (
+            select(
+                Room,
+                case((ActiveInvite.id.is_not(None), True), else_=False).label('has_active_invite'),
+                TenantProfile.id.label('tenant_id'),
+                User.first_name,
+                User.last_name,
+                User.phone_no
+            )
+            .outerjoin(ActiveInvite, and_(
+                ActiveInvite.room_id == Room.id,
+                ActiveInvite.status == InviteStatus.SENT,
+                ActiveInvite.expires_at > curr_time
+            ))
+            .outerjoin(PendingTenantInvite, and_(
+                PendingTenantInvite.room_id == Room.id,
+                PendingTenantInvite.status == InviteStatus.ACCEPTED
+            ))
+            .outerjoin(TenantProfile, and_(
+                TenantProfile.id == PendingTenantInvite.accepted_by_tenant_id,
+                TenantProfile.status == TenantStatus.PENDING
+            ))
+            .outerjoin(User, User.id == TenantProfile.user_id)
+            .where(Room.id == room_id)
+            .options(joinedload(Room.lodge))
+        )
+
+        return db.execute(stmt).first()
+
+
     def get_rooms(self, db: Session, lodge_id:int, landlord_id: int, skip: int = 0, max_limit: int = 50):
         """
         Retrieve a list of rooms with pagination support

@@ -10,14 +10,22 @@ from app.crud.invite import crud_invite
 from app.crud.user import crud_user
 from app.crud.tenantprofile import crud_tenant
 from app.core.enums import UserRole, InviteStatus, TenantStatus
-from app.core.exceptions import UserAlreadyExistError, LodgeNotFoundError,  \
-    TenantProfileNotFoundError, InviteNotFoundError, InvalidInvitation, InvalidActionError
+from app.core.exceptions import (
+    UserAlreadyExistError, LodgeNotFoundError, TenantProfileNotFoundError,
+    InviteNotFoundError, InvalidInvitation, InvalidActionError,
+    RentAmtExceededError, InvalidLeaseActionError, RoomNotFoundError
+)
 from app.core.security import get_password_hash
 from app.models.tenantprofile import TenantProfile
 from app.models.user import User
-from app.schemas.tenantprofile import TenantProfileCreate, TenantProfileUpdate, TenantStatusUpdate
+from app.models.lease import Lease
+from app.models.payment import Payment
+from app.models.invitation import Invite
+from app.schemas.tenantprofile import TenantProfileCreate, TenantProfileUpdate, TenantStatusUpdate, TenantApprovalCreate
 from app.schemas.user import UserInternal
-from app.services import lodge_service
+from app.services import lodge_service, room_service
+from app.services.payment_service import can_add_payment
+from app.crud.lease import crud_lease
 
 
 def sign_up_tenant(
@@ -42,7 +50,7 @@ def sign_up_tenant(
     if invite_record.is_expired:
         raise InvalidInvitation(invite_status=InviteStatus.EXPIRED)
 
-    if invite_record.status in [InviteStatus.EXPIRED, InviteStatus.ACCEPTED]:
+    if invite_record.status != InviteStatus.SENT:
         raise InvalidInvitation(invite_status=invite_record.status)
 
     if crud_user.get_user_by_email(db, email=tenant_in.user_info.email):
@@ -162,9 +170,104 @@ def fetch_tenant_by_landlord(
 
     return tenant
 
+
+def approve_tenant_application(
+        db: Session,
+        tenant_id: int,
+        landlord_user: User,
+        approval_data: TenantApprovalCreate
+) -> Lease:
+    """
+    Approve a tenant's onboarding application and atomically create a Lease + initial Payment.
+
+    Args:
+        db (Session): The database session.
+        tenant_id (int): The ID of the tenant profile.
+        landlord_user (User): The authenticated landlord.
+        approval_data (TenantApprovalCreate): Explicit lease terms and upfront payment.
+
+    Returns:
+        Lease: The newly created lease.
+    """
+    options = [
+        joinedload(TenantProfile.lodge),
+        joinedload(TenantProfile.invite)
+    ]
+    tenant = crud_tenant.get(db, tenant_id, *options)
+
+    if not tenant:
+        raise TenantProfileNotFoundError()
+
+    if tenant.lodge.landlord_id != landlord_user.id:
+        raise TenantProfileNotFoundError()
+
+    if tenant.status != TenantStatus.PENDING:
+        raise InvalidActionError(error_name='Tenant Status', error_value=tenant.status.value)
+
+    target_room_id = tenant.invite.room_id if tenant.invite else None
+    if not target_room_id:
+        raise RoomNotFoundError(detail="No room associated with this tenant application")
+
+    room = room_service.verify_room_existence(db, landlord_id=landlord_user.id, room_id=target_room_id)
+
+    active_lease = crud_lease.get_active_lease_for_room(db, room_id=room.id)
+    if active_lease:
+        raise InvalidLeaseActionError(lease_status=active_lease.computed_status)
+
+    default_total_payments = 0
+    if not can_add_payment(
+        total_payments=default_total_payments,
+        incoming_amt=approval_data.total_amt_paid,
+        agreed_amt=approval_data.agreed_rent_amt
+    ):
+        raise RentAmtExceededError(
+            attempted=approval_data.total_amt_paid,
+            current_total=default_total_payments,
+            agreed=approval_data.agreed_rent_amt
+        )
+
+    return crud_tenant.approve_and_create_lease(
+        db,
+        tenant=tenant,
+        room_id=room.id,
+        approval_data=approval_data
+    )
+
+
+def reject_tenant_application(
+        db: Session,
+        tenant_id: int,
+        landlord_user: User
+) -> TenantProfile:
+    """
+    Reject a tenant's onboarding application.
+
+    Args:
+        db (Session): The database session.
+        tenant_id (int): The ID of the tenant profile.
+        landlord_user (User): The authenticated landlord.
+
+    Returns:
+        TenantProfile: The updated tenant profile with REJECTED status.
+    """
+    options = joinedload(TenantProfile.lodge)
+    tenant = crud_tenant.get(db, tenant_id, options)
+
+    if not tenant:
+        raise TenantProfileNotFoundError()
+
+    if tenant.lodge.landlord_id != landlord_user.id:
+        raise TenantProfileNotFoundError()
+
+    if tenant.status != TenantStatus.PENDING:
+        raise InvalidActionError(error_name='Tenant Status', error_value=tenant.status.value)
+
+    return crud_tenant.reject_tenant(db, tenant=tenant)
+
+
 def update_tenant_profile_status(db: Session, tenant_id: int, landlord_id: int, update_data: TenantStatusUpdate):
     options = joinedload(TenantProfile.lodge)
-    tenant= crud_tenant.get(db, tenant_id, options)
+    tenant = crud_tenant.get(db, tenant_id, options)
 
     if not tenant:
         raise TenantProfileNotFoundError()
@@ -174,7 +277,6 @@ def update_tenant_profile_status(db: Session, tenant_id: int, landlord_id: int, 
 
     if update_data.status == TenantStatus.PENDING:
         raise InvalidActionError(error_name='Tenant Status', error_value=update_data.status)
-
 
     return crud_tenant.update(db, update_data=update_data, db_obj=tenant)
 

@@ -10,11 +10,11 @@ from app.core import constants
 from app.core.enums import RoomStatus
 from app.models.room import Room
 from app.schemas import room as schema_room
+from app.schemas.room import RoomResponse, RoomCreate, BulkRoomUpdate, PendingApplicantSummary
 from app.crud.room import crud_room
 from sqlalchemy.orm import Session, joinedload
 
 from app.schemas.lodge import LodgeCreate
-from app.schemas.room import RoomResponse, RoomCreate, BulkRoomUpdate
 from app.services import lodge_service
 from app.core.exceptions import RoomAlreadyExistError, RoomNotFoundError, RoomIsOccupiedError, NotUpdatableOptionError
 
@@ -90,7 +90,7 @@ def verify_room_existence(db: Session, landlord_id: int, room_id: int):
 
 def get_room_details(db: Session, room_id: int, landlord_id: int):
     """
-    Get the details of a specific room.
+    Get the details of a specific room, including its onboarding states.
 
     Args:
         db (Session): The database session.
@@ -98,9 +98,28 @@ def get_room_details(db: Session, room_id: int, landlord_id: int):
         landlord_id (int): The ID of the landlord.
 
     Returns:
-        Room: The requested room details.
+        RoomResponse: The requested room details with dynamic onboarding attributes.
     """
-    return verify_room_existence(db, room_id=room_id, landlord_id=landlord_id)
+    row = crud_room.get_room_with_onboarding_state(db, room_id=room_id)
+    if not row:
+        raise RoomNotFoundError()
+
+    room_obj = row.Room
+    lodge_service.verify_lodge_ownership(db, lodge_id=room_obj.lodge_id, landlord_id=landlord_id)
+
+    # 1. Unpack the entire row mapping directly. Pydantic will extract only the fields it needs!
+    pending_dto = None
+    if row.tenant_id:
+        pending_dto = PendingApplicantSummary(**row._mapping)
+
+    # 2. Use model_validate to safely handle the Room ORM object and its computed_status @property
+    room_dto = RoomResponse.model_validate(room_obj)
+    
+    # 3. Assign our computed SQL flags and unpacked DTO
+    room_dto.has_active_invite = row.has_active_invite
+    room_dto.pending_applicant = pending_dto
+
+    return room_dto
 
 
 
