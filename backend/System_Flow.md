@@ -13,12 +13,12 @@ The system uses stateless JWT authentication. Every user (Landlord or Tenant) mu
 2. **Login:** `POST /api/v1/auth/login` - Returns the `access_token` and `refresh_token`.
 
 ### Tenant Onboarding (Invite System)
-Tenants cannot register independently. They must be invited to a specific property.
-1. **Generate Invite:** Landlord calls `POST /api/v1/invites/` to create an invite tied to a specific `lodge_id`.
+Tenants cannot register independently. They must be invited to a specific room in a property.
+1. **Generate Invite:** Landlord calls `POST /api/v1/invites/` to create an invite tied to a specific `room_id`.
 2. **Verify Invite:** Tenant (client app) can optionally call `GET /api/v1/invites/{invite_id}` to verify the link is valid and not expired.
 3. **Register via Invite:** Tenant calls `POST /api/v1/auth/register/tenant` using the invite data. This creates their `User` (role: `TENANT`) and automatically generates a `TenantProfile` (status: `PENDING`).
 4. **Login:** `POST /api/v1/auth/login` - Returns the JWT.
-5. **Approve/Reject:** Landlord calls `POST /api/v1/tenants/{tenant_id}/approve` or `/reject` to finalize the onboarding application and automatically generate the Lease.
+5. **Approve/Reject:** Landlord calls `POST /api/v1/tenants/{tenant_id}/approve` or `/reject`. Approving finalizing the onboarding and automatically generates the first Lease (and initial payment) for that room.
 
 ---
 
@@ -43,7 +43,7 @@ Landlords set up their portfolio before assigning tenants.
 
 Once a tenant is registered, approved, and rooms are set up, the landlord can manage leases.
 
-1. **Create Lease:** `POST /api/v1/leases/` - (Also happens automatically on tenant approval). Assigns a `tenant_id` to a `room_id`. Sets the `agreed_rent_amt`, `start_date`, and `end_date`. *(This action automatically changes the Room status to OCCUPIED).*
+1. **Create Lease:** `POST /api/v1/leases/` - Manually creates a new lease for an *existing, non-pending tenant* (e.g. for lease renewals or renting a second room). Bypasses the invite flow. Assigns a `tenant_id` to a `room_id`. Sets the `agreed_rent_amt`, `start_date`, and `end_date`. *(This action automatically changes the Room status to OCCUPIED).*
 2. **View Leases:** `GET /api/v1/leases/{lodge_id}` - Lists all leases for a specific property.
 3. **Update Lease:** `PATCH /api/v1/leases/{lease_id}` - Modifies active lease terms.
 4. **Terminate Lease:** `PATCH /api/v1/leases/terminate/{lease_id}` - Ends the lease, reverting the room status.
@@ -80,4 +80,4 @@ The backend aggregates complex data for the frontend dashboards.
 
 ### Tenant Dashboard
 * **Endpoint:** `GET /api/v1/dashboard-tenant/me/tenants`
-* **Data Returned:** Personal active lease summary, days remaining countdown, and rent balance.
+* **Data Returned:** A list of active lease summaries (since a tenant can rent multiple rooms), each showing the days remaining countdown and rent balance.
